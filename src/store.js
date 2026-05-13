@@ -82,7 +82,7 @@ export function useFirestore(colName) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   useEffect(() => {
     const colRef = collection(db, colName);
     const unsub = onSnapshot(colRef, (snap) => {
@@ -120,11 +120,17 @@ COLLECTIONS.forEach(key => {
 
 export function useStore(selector) {
   const [val, setVal] = useState(() => selector(getState()));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     setVal(selector(getState()));
-    return subscribe((s) => setVal(selector(s)));
-  }, []);
+
+    const unsubscribe = subscribe((s) => {
+      setVal(selector(s));
+    });
+
+    return unsubscribe;
+  }, [selector]);
+
   return val;
 }
 
