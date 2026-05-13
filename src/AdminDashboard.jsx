@@ -1,6 +1,42 @@
 import { useState } from "react";
-import { useStore, actions, T, genId, now } from "./store";
+import { useStore, actions, T, genId, now, TRAIN_NAMES } from "./store";
 import { Badge, Chip, StatCard, TabBar, Section, QRCode } from "./store";
+
+/* ── Password generator (kept local, no need to persist) ─────────────────── */
+const genVendorId = () => "V" + String(Math.floor(1000 + Math.random() * 9000));
+const genPassword = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+};
+
+/* ── Mini QR for credential modal ─────────────────────────────────────────── */
+const MiniQR = ({ trainNo, size = 100 }) => {
+  const seed = trainNo.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rng  = (n) => { let x = seed * 9301 + n * 49297; return ((x % 233280) / 233280); };
+  const cells = Array.from({ length: 7 }, (_, r) =>
+    Array.from({ length: 7 }, (_, c) => {
+      if ((r < 3 && c < 3) || (r < 3 && c > 3) || (r > 3 && c < 3)) return true;
+      return rng(r * 7 + c) > 0.45;
+    })
+  );
+  const cell = size / 9;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+      <rect width={size} height={size} fill="#fff" rx={4} />
+      {[[0,0],[0,6],[6,0]].map(([r,c], i) => (
+        <g key={i}>
+          <rect x={cell*(c+1)-1} y={cell*(r+1)-1} width={cell*3+2} height={cell*3+2} fill="#1a1a2e" rx={2}/>
+          <rect x={cell*(c+1)+3} y={cell*(r+1)+3} width={cell*3-6} height={cell*3-6} fill="#fff" rx={1}/>
+          <rect x={cell*(c+1)+6} y={cell*(r+1)+6} width={cell*3-12} height={cell*3-12} fill="#1a1a2e" rx={1}/>
+        </g>
+      ))}
+      {cells.map((row, r) => row.map((on, c) => {
+        if ((r < 3 && c < 3) || (r < 3 && c > 3) || (r > 3 && c < 3)) return null;
+        return on ? <rect key={`${r}${c}`} x={cell*(c+1)} y={cell*(r+1)} width={cell-1} height={cell-1} fill="#1a1a2e" rx={1}/> : null;
+      }))}
+    </svg>
+  );
+};
 
 export default function AdminDashboard() {
   const orders     = useStore(s => s.orders);
@@ -8,13 +44,19 @@ export default function AdminDashboard() {
   const complaints = useStore(s => s.complaints);
   const feedback   = useStore(s => s.feedback);
   const qrCodes    = useStore(s => s.qrCodes);
+
   const [tab, setTab]           = useState('orders');
   const [showQR, setShowQR]     = useState(false);
   const [newTrain, setNewTrain] = useState('');
   const [newTrainName, setNewTrainName] = useState('');
   const [newToast, setNewToast] = useState('');
 
-  const TRAIN_NAMES = { "12139":"Sewagram Express","12140":"Maharashtra Express","22105":"Vidarbha Express","12859":"Gitanjali Express","12809":"Mumbai Mail" };
+  const [showAddVendor, setShowAddVendor] = useState(false);
+  const [showCreds,     setShowCreds]     = useState(null);
+  const [vForm, setVForm] = useState({ name:'', phone:'', trainNo:'', trainName:'' });
+  const [vErrors, setVErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+
   const stars = (n) => '★'.repeat(n) + '☆'.repeat(5-n);
 
   const totalRev  = orders.filter(o=>o.status==='Delivered').reduce((s,o)=>s+o.total,0);
@@ -24,15 +66,85 @@ export default function AdminDashboard() {
 
   const toast = (msg) => { setNewToast(msg); setTimeout(()=>setNewToast(''),3000); };
 
-  const genQR = () => {
+  // ── QR generation ──────────────────────────────────────────────────────────
+  const genQR = async () => {
     if (!newTrain.trim()) return;
-    actions.addQR({ id:genId('QR'), trainNo:newTrain, trainName:newTrainName||TRAIN_NAMES[newTrain]||'Express Train', createdAt:now(), active:true });
+    await actions.addQR({
+      id: genId('QR'),
+      trainNo: newTrain,
+      trainName: newTrainName || TRAIN_NAMES[newTrain] || 'Express Train',
+      createdAt: now(),
+      active: true,
+    });
     setNewTrain(''); setNewTrainName(''); setShowQR(false);
     toast('QR Code generated successfully!');
   };
 
+  // ── Add vendor ─────────────────────────────────────────────────────────────
+  const setV = (k) => (e) => {
+    setVForm(f => ({ ...f, [k]: e.target.value }));
+    setVErrors(er => ({ ...er, [k]: '' }));
+  };
+
+  const handleAddVendor = async () => {
+    const e = {};
+    if (!vForm.name.trim())      e.name    = "Required";
+    if (!vForm.phone.trim())     e.phone   = "Required";
+    if (!vForm.trainNo.trim())   e.trainNo = "Required";
+    if (!vForm.trainName.trim()) e.trainNo = e.trainNo || "Train name required";
+    // one active vendor per train (check live Firestore data)
+    if (vendors.find(v => v.train === vForm.trainNo.trim() && v.status === 'Active'))
+      e.trainNo = "An active vendor is already assigned to this train";
+    if (Object.keys(e).length) { setVErrors(e); return; }
+
+    setSaving(true);
+    const vendorId = genVendorId();
+    const password = genPassword();
+    const newVendor = {
+      id:        vendorId,
+      password,
+      name:      vForm.name.trim(),
+      phone:     vForm.phone.trim(),
+      train:     vForm.trainNo.trim(),
+      trainName: vForm.trainName.trim(),
+      status:    'Active',
+      sales:     0,
+      orders:    0,
+      rating:    0,
+      createdAt: now(),
+    };
+
+    try {
+      await actions.addVendor(newVendor);
+      setShowAddVendor(false);
+      setVForm({ name:'', phone:'', trainNo:'', trainName:'' });
+      setVErrors({});
+      setShowCreds(newVendor);   // show credentials popup
+      toast('Vendor added successfully!');
+    } catch (err) {
+      console.error(err);
+      toast('Failed to save vendor. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetAddForm = () => {
+    setShowAddVendor(false);
+    setVForm({ name:'', phone:'', trainNo:'', trainName:'' });
+    setVErrors({});
+  };
+
+  // ── Styles ─────────────────────────────────────────────────────────────────
+  const inp    = { width:'100%', padding:'9px 12px', border:'1.5px solid #e5e7eb', borderRadius:8, fontSize:'0.83rem', color:'#111827', outline:'none', boxSizing:'border-box', fontFamily:'sans-serif', transition:'border-color 0.15s' };
+  const errInp = { borderColor:'#fca5a5', background:'#fff5f5' };
+  const lbl    = { display:'block', fontSize:'0.68rem', fontWeight:700, color:'#374151', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:5 };
+  const errTxt = { fontSize:'0.62rem', color:'#dc2626', marginTop:3, display:'block' };
+
   return (
     <div className="view">
+
+      {/* PAGE HEADER */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Admin Dashboard</h1>
@@ -46,20 +158,23 @@ export default function AdminDashboard() {
 
       {newToast && <div className="toast toast-green">{newToast}</div>}
 
+      {/* STAT CARDS */}
       <div className="cards-grid">
-        <StatCard icon="🚂" label="Active Trains"  value={3}                                                          accent="blue"   delay={0}/>
+        <StatCard icon="🚂" label="Active Trains"   value={qrCodes.filter(q=>q.active).length}                        accent="blue"   delay={0}/>
         <StatCard icon="💰" label="Revenue Today"   value={`₹${totalRev.toLocaleString('en-IN')}`}                    accent="green"  delay={60}/>
         <StatCard icon="📦" label="Total Orders"    value={orders.length}                                              accent="orange" delay={120}/>
-        <StatCard icon="✅" label="Delivered"        value={delivered} sub={`${Math.round(delivered/orders.length*100)}% rate`} accent="green" delay={180}/>
+        <StatCard icon="✅" label="Delivered"        value={delivered} sub={orders.length ? `${Math.round(delivered/orders.length*100)}% rate` : '0% rate'} accent="green" delay={180}/>
         <StatCard icon="⏳" label="Pending"          value={pending}                                                    accent="yellow" delay={240}/>
         <StatCard icon="⚠️" label="Open Complaints" value={open}                                                       accent="red"    delay={300}/>
       </div>
 
+      {/* TAB BAR */}
       <TabBar
         tabs={[['orders','📦 Orders',0],['vendors','👤 Vendors',0],['qr','📲 QR Codes',0],['complaints','⚠️ Complaints',open],['feedback','⭐ Feedback',0]]}
         active={tab} onChange={setTab}
       />
 
+      {/* ORDERS TAB */}
       {tab==='orders' && (
         <Section title="Live Orders" count={orders.length}>
           <div className="tbl-wrap">
@@ -71,21 +186,33 @@ export default function AdminDashboard() {
                     <td className="td-id">{o.id}</td>
                     <td><Chip color="soft">🚂 {o.trainNo}</Chip></td>
                     <td><Chip>{o.seat}</Chip></td>
-                    <td className="td-items">{o.items.map(it=>`${it.name} ×${it.qty}`).join(', ')}</td>
+                    <td className="td-items">{(o.items||[]).map(it=>`${it.name} ×${it.qty}`).join(', ')}</td>
                     <td className="td-amt">₹{o.total}</td>
                     <td><Chip color={o.payment==='UPI'?'blue':'soft'}>{o.payment==='UPI'?'📱':'💵'} {o.payment}</Chip></td>
                     <td className="td-time">{o.time}</td>
                     <td><Badge label={o.status}/></td>
                   </tr>
                 ))}
+                {orders.length===0 && (
+                  <tr><td colSpan={8} style={{textAlign:'center',color:T.textLight,padding:'2rem',fontSize:'0.85rem'}}>No orders yet</td></tr>
+                )}
               </tbody>
             </table>
           </div>
         </Section>
       )}
 
+      {/* VENDORS TAB */}
       {tab==='vendors' && (
-        <Section title="Vendor Overview" count={vendors.length}>
+        <Section
+          title="Vendor Overview"
+          count={vendors.length}
+          action={
+            <button className="btn-primary" style={{fontSize:'0.72rem',padding:'4px 14px'}} onClick={()=>setShowAddVendor(true)}>
+              ➕ Add Vendor
+            </button>
+          }
+        >
           <div className="tbl-wrap">
             <table className="tbl">
               <thead><tr><th>ID</th><th>Name</th><th>Train</th><th>Sales</th><th>Rating</th><th>Status</th><th>Action</th></tr></thead>
@@ -95,22 +222,29 @@ export default function AdminDashboard() {
                     <td className="td-id">{v.id}</td>
                     <td className="td-name">{v.name}</td>
                     <td><Chip color="soft">{v.train}</Chip></td>
-                    <td className="td-amt">₹{v.sales.toLocaleString('en-IN')}</td>
-                    <td style={{fontWeight:700,color:T.blue}}>⭐ {v.rating}</td>
+                    <td className="td-amt">₹{(v.sales||0).toLocaleString('en-IN')}</td>
+                    <td style={{fontWeight:700,color:T.blue}}>⭐ {v.rating||0}</td>
                     <td><Badge label={v.status}/></td>
                     <td>
-                      <button className={`act-btn ${v.status==='Active'?'act-mute':'act-ok'}`} onClick={()=>actions.toggleVendor(v.id)}>
+                      <button
+                        className={`act-btn ${v.status==='Active'?'act-mute':'act-ok'}`}
+                        onClick={()=>actions.toggleVendor(v.id, v.status)}
+                      >
                         {v.status==='Active'?'Suspend':'Activate'}
                       </button>
                     </td>
                   </tr>
                 ))}
+                {vendors.length===0 && (
+                  <tr><td colSpan={7} style={{textAlign:'center',color:T.textLight,padding:'2rem',fontSize:'0.85rem'}}>No vendors yet</td></tr>
+                )}
               </tbody>
             </table>
           </div>
         </Section>
       )}
 
+      {/* QR TAB */}
       {tab==='qr' && (
         <Section title="QR Code Management" count={qrCodes.length}
           action={<button className="btn-primary" style={{fontSize:'0.72rem',padding:'4px 12px'}} onClick={()=>setShowQR(true)}>+ New QR</button>}>
@@ -131,13 +265,23 @@ export default function AdminDashboard() {
                     <p style={{textAlign:'center',fontSize:'0.58rem',color:T.textLight,marginTop:4,fontFamily:'monospace'}}>irctc.pantry/{qr.trainNo}</p>
                   </div>
                 </div>
-                <p style={{textAlign:'center',fontSize:'0.65rem',color:T.textSub,padding:'0 8px 8px'}}>Scan to order food on Train {qr.trainNo}</p>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0 12px 10px'}}>
+                  <p style={{fontSize:'0.65rem',color:T.textSub}}>Scan to order on Train {qr.trainNo}</p>
+                  <button
+                    className={`act-btn ${qr.active?'act-mute':'act-ok'}`}
+                    onClick={()=>actions.toggleQR(qr.id, qr.active)}
+                  >
+                    {qr.active?'Deactivate':'Activate'}
+                  </button>
+                </div>
               </div>
             ))}
+            {qrCodes.length===0 && <p style={{textAlign:'center',color:T.textLight,padding:'2rem',fontSize:'0.85rem'}}>No QR codes yet</p>}
           </div>
         </Section>
       )}
 
+      {/* COMPLAINTS TAB */}
       {tab==='complaints' && (
         <Section title="Passenger Complaints" count={open}>
           <div style={{padding:'0.85rem 1rem',display:'flex',flexDirection:'column',gap:'0.65rem'}}>
@@ -163,6 +307,7 @@ export default function AdminDashboard() {
         </Section>
       )}
 
+      {/* FEEDBACK TAB */}
       {tab==='feedback' && (
         <Section title="Passenger Feedback" count={feedback.length}>
           <div style={{padding:'0.85rem 1rem',display:'flex',flexDirection:'column',gap:'0.65rem'}}>
@@ -183,6 +328,7 @@ export default function AdminDashboard() {
         </Section>
       )}
 
+      {/* QR MODAL */}
       {showQR && (
         <div className="overlay" onClick={()=>setShowQR(false)}>
           <div className="drawer" style={{maxWidth:400}} onClick={e=>e.stopPropagation()}>
@@ -215,6 +361,110 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* ADD VENDOR MODAL */}
+      {showAddVendor && (
+        <div className="overlay" onClick={resetAddForm}>
+          <div className="drawer" style={{maxWidth:460}} onClick={e=>e.stopPropagation()}>
+            <div className="drawer-header">
+              <span className="section-title">➕ Add New Vendor</span>
+              <button className="close-btn" onClick={resetAddForm}>✕</button>
+            </div>
+            <div style={{padding:'1.1rem',display:'flex',flexDirection:'column',gap:'1rem',overflowY:'auto',maxHeight:'70vh'}}>
+
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <label style={lbl}>👤 Vendor Name *</label>
+                  <input style={{...inp,...(vErrors.name?errInp:{})}} placeholder="e.g. Ramesh Kumar" value={vForm.name} onChange={setV('name')}/>
+                  {vErrors.name && <span style={errTxt}>{vErrors.name}</span>}
+                </div>
+                <div>
+                  <label style={lbl}>📱 Phone *</label>
+                  <input style={{...inp,...(vErrors.phone?errInp:{})}} placeholder="e.g. 9876543210" value={vForm.phone} onChange={setV('phone')}/>
+                  {vErrors.phone && <span style={errTxt}>{vErrors.phone}</span>}
+                </div>
+              </div>
+
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <label style={lbl}>🚂 Train Number *</label>
+                  <input style={{...inp,...(vErrors.trainNo?errInp:{})}} placeholder="e.g. 12139" value={vForm.trainNo} onChange={setV('trainNo')}/>
+                  {vErrors.trainNo && <span style={errTxt}>{vErrors.trainNo}</span>}
+                </div>
+                <div>
+                  <label style={lbl}>🏷️ Train Name *</label>
+                  <input style={inp} placeholder="e.g. Sewagram Express" value={vForm.trainName} onChange={setV('trainName')}/>
+                </div>
+              </div>
+
+              <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,padding:'10px 12px',fontSize:'0.7rem',color:'#1e40af'}}>
+                🔑 A <strong>Vendor ID</strong> and <strong>Password</strong> will be auto-generated. Share them with the vendor after saving.
+              </div>
+
+              <button className="btn-primary" onClick={handleAddVendor} disabled={saving}
+                style={{width:'100%',padding:'12px',fontSize:'0.85rem'}}>
+                {saving ? '⏳ Saving...' : '✅ Create Vendor & Generate Credentials'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREDENTIALS POPUP */}
+      {showCreds && (
+        <div className="overlay" onClick={()=>setShowCreds(null)}>
+          <div className="drawer" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
+            <div className="drawer-header">
+              <span className="section-title">🔑 Vendor Credentials</span>
+              <button className="close-btn" onClick={()=>setShowCreds(null)}>✕</button>
+            </div>
+            <div style={{padding:'1.1rem',display:'flex',flexDirection:'column',gap:'1rem'}}>
+
+              <div style={{background:'linear-gradient(135deg,#0f172a,#1e293b)',borderRadius:14,padding:20}}>
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.45)',letterSpacing:'1px',marginBottom:3}}>VENDOR NAME</div>
+                  <div style={{fontSize:'1rem',fontWeight:800,color:'#fff'}}>{showCreds.name}</div>
+                  <div style={{fontSize:'0.7rem',color:'rgba(255,255,255,0.55)',marginTop:2}}>🚂 Train {showCreds.train} — {showCreds.trainName}</div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                  <div style={{background:'rgba(255,255,255,0.08)',borderRadius:8,padding:'10px 12px'}}>
+                    <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.45)',letterSpacing:'1px',marginBottom:4}}>VENDOR ID</div>
+                    <div style={{fontSize:'1.15rem',fontWeight:900,color:'#60a5fa',fontFamily:'monospace',letterSpacing:'2px'}}>{showCreds.id}</div>
+                  </div>
+                  <div style={{background:'rgba(255,255,255,0.08)',borderRadius:8,padding:'10px 12px'}}>
+                    <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.45)',letterSpacing:'1px',marginBottom:4}}>PASSWORD</div>
+                    <div style={{fontSize:'1.15rem',fontWeight:900,color:'#4ade80',fontFamily:'monospace',letterSpacing:'2px'}}>{showCreds.password}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{display:'flex',justifyContent:'center'}}>
+                <div style={{padding:12,background:'#f8fafc',borderRadius:12,border:'1px solid #e2e8f0',textAlign:'center'}}>
+                  <MiniQR trainNo={showCreds.train} size={110}/>
+                  <div style={{fontSize:'0.6rem',color:'#94a3b8',marginTop:6,fontFamily:'monospace'}}>irctc.pantry/{showCreds.train}</div>
+                </div>
+              </div>
+
+              <div style={{background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:8,padding:'10px 12px',fontSize:'0.7rem',color:'#9a3412'}}>
+                ⚠️ <strong>Save these now.</strong> The password cannot be retrieved later — only reset by admin.
+              </div>
+
+              <div style={{display:'flex',gap:8}}>
+                <button className="btn-primary" style={{flex:1,padding:'10px'}}
+                  onClick={()=>{ navigator.clipboard?.writeText(`Vendor ID: ${showCreds.id}\nPassword: ${showCreds.password}\nTrain: ${showCreds.train} - ${showCreds.trainName}`); toast('Copied!'); }}>
+                  📋 Copy Credentials
+                </button>
+                <button onClick={()=>setShowCreds(null)}
+                  style={{padding:'10px 16px',background:'#f1f5f9',border:'1px solid #e2e8f0',borderRadius:8,fontSize:'0.8rem',fontWeight:700,cursor:'pointer'}}>
+                  Done ✓
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

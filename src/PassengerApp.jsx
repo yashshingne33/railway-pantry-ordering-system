@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useStore, actions, MENU, CATS, COACH_GROUPS, ALL_COACHES, TRAIN_NAMES, COACH_LAYOUT, generateCoachSeats, T, genId, now, stars } from "./store";
-import { Badge, Chip, QtyCtrl } from "./store";
+import { useStore, actions, MENU, CATS, COACH_GROUPS, TRAIN_NAMES, T, genId, now, stars } from "./store";
+import { Badge, QtyCtrl } from "./store";
 
 /* ══════════════════════════════════════════════════════════════
    PASSENGER APP — Train fixed from QR, no train selection
@@ -12,7 +12,7 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
   const [cart, setCart]           = useState({});
   const [orderInfo, setOrderInfo] = useState({});
   const [payMethod, setPayMethod] = useState('upi');
-  const [sessionOrderId, setSessionOrderId] = useState(null);
+  const [setSessionOrderId] = useState(null);
 
   const addItem = item => setCart(c => ({...c,[item.id]:(c[item.id]||0)+1}));
   const remItem = item => setCart(c => {const n={...c};if(n[item.id]>1)n[item.id]--;else delete n[item.id];return n;});
@@ -84,41 +84,49 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
    Train is already known from QR, just pick coach & berth
 ══════════════════════════════════════════════════════════════ */
 function PCoachSeatSelect({ trainNo, onNext }) {
+  const [station, setStation] = useState('');
+  const [platform, setPlatform] = useState('');
   const [coach, setCoach] = useState('');
-  const [seat,  setSeat]  = useState(null);
-  const [name,  setName]  = useState('');
-  const [subStep, setSubStep] = useState(0); // 0=coach, 1=seat, 2=name
+  const [seat, setSeat] = useState('');
+  const [name, setName] = useState('');
+  const [errors, setErrors] = useState({});
 
   const trainName = TRAIN_NAMES[trainNo] || 'Express Train';
-  const seats = generateCoachSeats();
 
-  // Group seats by bay for compartment view
-  const bays = [];
-  for (let b = 1; b <= 9; b++) {
-    bays.push(seats.filter(s => s.bay === b));
-  }
-
-  const seatColors = COACH_LAYOUT.seatTypes;
-
-  const canNext = [!!coach, !!seat, true][subStep];
-
-  const next = () => {
-    if (subStep < 2) { setSubStep(s => s+1); return; }
-    onNext({ coach, seat: String(seat), name });
+  const validate = () => {
+    const e = {};
+    if (!station) e.station = true;
+    if (!coach)   e.coach   = true;
+    if (!seat)    e.seat    = true;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const subSteps = [
-    { label:'Coach', icon:'🚃' },
-    { label:'Berth', icon:'💺' },
-    { label:'Name',  icon:'👤' },
-  ];
+  const handleNext = () => {
+    if (validate()) onNext({ coach, seat: String(seat), name });
+  };
+
+  const inputStyle = (field) => ({
+    width: '100%', padding: '10px 12px', boxSizing: 'border-box',
+    border: `1.5px solid ${errors[field] ? '#ef4444' : '#e5e7eb'}`,
+    borderRadius: 8, fontSize: '0.9rem', color: T.text,
+    background: errors[field] ? '#fef2f2' : '#fff', outline: 'none',
+  });
+
+  const selectStyle = (field) => ({
+    ...inputStyle(field),
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: 28,
+  });
+
+  const STATIONS = ['Nagpur','Wardha','Sewagram','Bhusawal','Igatpuri','Kalyan','Mumbai CSMT'];
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
 
-      {/* Hero strip — train is fixed from QR */}
-      <div style={{background:'linear-gradient(135deg,#c2410c,#e65c00)',padding:'12px 16px',flexShrink:0,position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',right:-20,top:-20,width:80,height:80,borderRadius:'50%',background:'rgba(255,255,255,.07)'}}/>
+      {/* Hero */}
+      <div style={{background:'linear-gradient(135deg,#c2410c,#e65c00)',padding:'12px 16px',flexShrink:0}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <div style={{background:'rgba(255,255,255,.15)',borderRadius:10,padding:'8px 12px',display:'flex',alignItems:'center',gap:7}}>
             <span style={{fontSize:'1.4rem'}}>🚂</span>
@@ -137,251 +145,84 @@ function PCoachSeatSelect({ trainNo, onNext }) {
         </div>
       </div>
 
-      {/* Sub-step indicator */}
-      <div style={{background:'#fff',borderBottom:'1px solid #f3f4f6',padding:'8px 14px',flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center'}}>
-          {subSteps.map((s,i) => (
-            <div key={s.label} style={{display:'flex',alignItems:'center',flex:i<subSteps.length-1?1:'none'}}>
-              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1,cursor:i<subStep?'pointer':'default'}} onClick={()=>i<subStep&&setSubStep(i)}>
-                <div style={{width:26,height:26,borderRadius:'50%',background:i<subStep?T.green:i===subStep?T.orange:'#e5e7eb',color:i<=subStep?'#fff':'#9ca3af',display:'flex',alignItems:'center',justifyContent:'center',fontSize:i<subStep?'0.75rem':'0.78rem',fontWeight:900,transition:'all .25s'}}>
-                  {i<subStep?'✓':s.icon}
-                </div>
-                <span style={{fontSize:'0.5rem',fontWeight:i===subStep?800:600,color:i<subStep?T.green:i===subStep?T.orange:'#9ca3af',whiteSpace:'nowrap'}}>{s.label}</span>
-              </div>
-              {i<subSteps.length-1 && <div style={{flex:1,height:2,margin:'0 3px',marginBottom:12,background:i<subStep?T.green:'#e5e7eb',transition:'background .3s'}}/>}
-            </div>
-          ))}
+      <div style={{flex:1,overflowY:'auto',padding:'14px 14px 0'}}>
+
+        {/* Train Number */}
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',display:'flex',alignItems:'center',gap:5,marginBottom:5}}>🚂 TRAIN NUMBER *</label>
+          <input value={trainNo} readOnly style={{...inputStyle(null),background:'#f3f4f6',color:T.textMid,cursor:'not-allowed'}}/>
         </div>
-      </div>
 
-      <div style={{flex:1,overflowY:'auto',padding:'12px 14px 0'}}>
+        {/* Station */}
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',display:'flex',alignItems:'center',gap:5,marginBottom:5}}>📍 CURRENT STATION / STOP *</label>
+          <select value={station} onChange={e=>{setStation(e.target.value);setErrors(p=>({...p,station:false}))}} style={selectStyle('station')}>
+            <option value="">Select your current stop</option>
+            {STATIONS.map(s => <option key={s}>{s}</option>)}
+          </select>
+          {errors.station && <div style={{fontSize:'0.62rem',color:'#ef4444',marginTop:3}}>Required</div>}
+        </div>
 
-        {/* STEP 0: Coach selection */}
-        {subStep===0 && (
-          <div style={{animation:'fadeUp .25s ease'}}>
-            <p style={{fontWeight:800,fontSize:'0.85rem',color:T.text,marginBottom:3}}>Select Your Coach</p>
-            <p style={{fontSize:'0.68rem',color:T.textSub,marginBottom:12}}>Check the coach number written on your ticket</p>
+        {/* Platform */}
+        {/* <div style={{marginBottom:12}}>
+          <label style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',display:'flex',alignItems:'center',gap:5,marginBottom:5}}>
+            🅿️ PLATFORM NO <span style={{fontWeight:400,color:T.textLight}}>(optional)</span>
+          </label>
+          <input value={platform} onChange={e=>setPlatform(e.target.value)} placeholder="e.g. 2" style={{...inputStyle(null),width:120}}/>
+        </div> */}
 
-            {COACH_GROUPS.map(grp => (
-              <div key={grp.label} style={{marginBottom:14}}>
-                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8}}>
-                  <div style={{width:10,height:10,borderRadius:2,background:grp.color}}/>
-                  <p style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px'}}>{grp.label.toUpperCase()}</p>
-                </div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
-                  {grp.coaches.map(c => (
-                    <button key={c} onClick={()=>setCoach(c)}
-                      style={{width:58,height:46,borderRadius:10,border:`2px solid ${coach===c?grp.color:'#e5e7eb'}`,
-                        background:coach===c?`${grp.color}15`:'#f9fafb',color:coach===c?grp.color:T.textMid,
-                        fontSize:'0.86rem',fontWeight:800,cursor:'pointer',
-                        boxShadow:coach===c?`0 0 0 3px ${grp.color}25`:'none',transition:'all .15s'}}>
-                      {c}
-                    </button>
-                  ))}
+        {/* Coach + Seat */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+          <div>
+            <label style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',display:'flex',alignItems:'center',gap:5,marginBottom:5}}>🚃 COACH *</label>
+            <select value={coach} onChange={e=>{setCoach(e.target.value);setErrors(p=>({...p,coach:false}))}} style={selectStyle('coach')}>
+              <option value="">Select</option>
+              {COACH_GROUPS.map(grp => (
+                <optgroup key={grp.label} label={grp.label}>
+                  {grp.coaches.map(c => <option key={c}>{c}</option>)}
+                </optgroup>
+              ))}
+            </select>
+            {errors.coach && <div style={{fontSize:'0.62rem',color:'#ef4444',marginTop:3}}>Required</div>}
+          </div>
+          <div>
+            <label style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',display:'flex',alignItems:'center',gap:5,marginBottom:5}}>💺 SEAT NO *</label>
+            <input type="number" min={1} max={72} value={seat} onChange={e=>{setSeat(e.target.value);setErrors(p=>({...p,seat:false}))}} placeholder="e.g. 45" style={inputStyle('seat')}/>
+            {errors.seat && <div style={{fontSize:'0.62rem',color:'#ef4444',marginTop:3}}>Required</div>}
+          </div>
+        </div>
+
+        {/* Name (optional) */}
+        <div style={{marginBottom:14}}>
+          <label style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',display:'flex',alignItems:'center',gap:5,marginBottom:5}}>
+            👤 NAME <span style={{fontWeight:400,color:T.textLight}}>(optional)</span>
+          </label>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Rahul Sharma" style={inputStyle(null)}/>
+        </div>
+
+        {/* Benefits */}
+        <div style={{marginBottom:6}}>
+          <div style={{fontSize:'0.62rem',fontWeight:800,color:T.textMid,letterSpacing:'.5px',marginBottom:8}}>WHY ORDER WITH US?</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
+            {[['🚀','Fast Delivery','Hot food at your seat'],['💯','Indian Railway Certified','Verified vendors only'],['📱','Easy Payment','UPI & Cash accepted'],['🌿','Veg & Non-Veg','Wide menu choice']].map(([icon,title,sub])=>(
+              <div key={title} style={{background:'#f9fafb',border:'1px solid #f3f4f6',borderRadius:8,padding:'10px 11px',display:'flex',alignItems:'flex-start',gap:9}}>
+                <span style={{fontSize:'1.2rem',flexShrink:0}}>{icon}</span>
+                <div>
+                  <div style={{fontSize:'0.72rem',fontWeight:800,color:T.text}}>{title}</div>
+                  <div style={{fontSize:'0.62rem',color:T.textSub}}>{sub}</div>
                 </div>
               </div>
             ))}
-
-            {coach && (
-              <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8,marginTop:4,marginBottom:14}}>
-                <span>🚃</span>
-                <span style={{fontSize:'0.78rem',fontWeight:700,color:T.green}}>Coach <strong>{coach}</strong> selected ✓</span>
-              </div>
-            )}
           </div>
-        )}
-
-        {/* STEP 1: Berth/Seat selection — REAL TRAIN LAYOUT */}
-        {subStep===1 && (
-          <div style={{animation:'fadeUp .25s ease'}}>
-            <p style={{fontWeight:800,fontSize:'0.85rem',color:T.text,marginBottom:2}}>Select Your Berth</p>
-            <p style={{fontSize:'0.68rem',color:T.textSub,marginBottom:10}}>Coach <strong style={{color:T.orange}}>{coach}</strong> — tap your berth number from the diagram</p>
-
-            {/* Legend */}
-            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
-              {Object.entries(seatColors).map(([type,{label,color,shortColor}]) => (
-                <div key={type} style={{display:'flex',alignItems:'center',gap:4,padding:'3px 8px',borderRadius:99,background:shortColor,border:`1px solid ${color}25`}}>
-                  <div style={{width:7,height:7,borderRadius:2,background:color}}/>
-                  <span style={{fontSize:'0.58rem',fontWeight:700,color}}>{label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Direct input */}
-            <div style={{marginBottom:10,display:'flex',alignItems:'center',gap:8}}>
-              <input type="number" min={1} max={72} placeholder="Type berth no."
-                value={typeof seat==='number'?seat:''}
-                onChange={e=>setSeat(Number(e.target.value)||null)}
-                style={{width:110,padding:'8px 10px',border:`1.5px solid ${seat?T.orange:'#e5e7eb'}`,borderRadius:8,fontSize:'0.9rem',fontWeight:700,color:T.text,outline:'none',textAlign:'center'}}/>
-              {seat && (
-                <div style={{flex:1,padding:'7px 10px',background:'#fff7ed',border:'1px solid #fed7aa',borderRadius:8,fontSize:'0.72rem',fontWeight:700,color:T.orange}}>
-                  Berth {seat} · {seats.find(s=>s.no===seat)?.type||'?'} berth
-                </div>
-              )}
-            </div>
-
-            <p style={{fontSize:'0.6rem',fontWeight:700,color:T.textLight,marginBottom:8,letterSpacing:'.5px'}}>OR TAP FROM TRAIN DIAGRAM BELOW</p>
-
-            {/* Train compartment layout */}
-            <div style={{background:'#f8fafc',borderRadius:12,border:'1px solid #e5e7eb',overflow:'hidden'}}>
-              {/* Train header */}
-              <div style={{background:'linear-gradient(90deg,#1e3a5f,#2563eb)',padding:'6px 12px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <div style={{width:28,height:18,borderRadius:3,background:'rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <span style={{fontSize:'0.6rem',fontWeight:900,color:'#fff'}}>🚂</span>
-                  </div>
-                  <span style={{fontSize:'0.62rem',fontWeight:800,color:'rgba(255,255,255,.9)'}}>COACH {coach} · 72 BERTHS · 9 COMPARTMENTS</span>
-                </div>
-                <div style={{display:'flex',gap:3}}>
-                  <div style={{width:6,height:6,borderRadius:'50%',background:'#4ade80'}}/>
-                  <div style={{width:6,height:6,borderRadius:'50%',background:'#fbbf24'}}/>
-                  <div style={{width:6,height:6,borderRadius:'50%',background:'#f87171'}}/>
-                </div>
-              </div>
-
-              {/* Window strip */}
-              <div style={{background:'#dbeafe',padding:'3px 12px',display:'flex',gap:4,alignItems:'center'}}>
-                {Array.from({length:9}).map((_,i) => (
-                  <div key={i} style={{flex:1,height:8,borderRadius:2,background:'rgba(255,255,255,.6)',border:'1px solid #93c5fd'}}/>
-                ))}
-              </div>
-
-              <div style={{padding:'8px'}}>
-                {bays.map((baySeats, bayIdx) => {
-                  const mainSeats = baySeats.filter(s => ['L','M','U'].includes(s.type));
-                  // left side = seats 1,2,3 ; right side = 4,5,6 ; side = 7,8
-                  const leftSeats  = mainSeats.filter((_,i) => i < 3);
-                  const rightSeats = mainSeats.filter((_,i) => i >= 3);
-                  const sideSeats  = baySeats.filter(s => ['SL','SU'].includes(s.type));
-
-                  return (
-                    <div key={bayIdx} className="berth-compartment">
-                      <div className="berth-compartment-label">Compartment {bayIdx+1}</div>
-
-                      {/* Main berths: Left | Aisle | Right */}
-                      <div className="berth-main-row">
-                        {/* Left column (window side) */}
-                        <div style={{display:'flex',flexDirection:'column',gap:2}}>
-                          {leftSeats.map(s => {
-                            const {color,shortColor} = seatColors[s.type];
-                            const isSel = seat === s.no;
-                            return (
-                              <button key={s.no} className="berth-seat" onClick={()=>setSeat(s.no)}
-                                style={{background:isSel?color:shortColor,border:`1.5px solid ${isSel?color:color+'60'}`,color:isSel?'#fff':color,boxShadow:isSel?`0 2px 8px ${color}50`:'none'}}>
-                                <span className="berth-seat-no">{s.no}</span>
-                                <span className="berth-seat-type">{s.type}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Empty middle fill */}
-                        <div/>
-
-                        {/* Aisle indicator */}
-                        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2}}>
-                          {Array.from({length:3}).map((_,i)=>(
-                            <div key={i} style={{width:4,height:4,borderRadius:'50%',background:'#e5e7eb'}}/>
-                          ))}
-                        </div>
-
-                        {/* Right column */}
-                        <div/>
-
-                        <div style={{display:'flex',flexDirection:'column',gap:2}}>
-                          {rightSeats.map(s => {
-                            const {color,shortColor} = seatColors[s.type];
-                            const isSel = seat === s.no;
-                            return (
-                              <button key={s.no} className="berth-seat" onClick={()=>setSeat(s.no)}
-                                style={{background:isSel?color:shortColor,border:`1.5px solid ${isSel?color:color+'60'}`,color:isSel?'#fff':color,boxShadow:isSel?`0 2px 8px ${color}50`:'none'}}>
-                                <span className="berth-seat-no">{s.no}</span>
-                                <span className="berth-seat-type">{s.type}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Side berths */}
-                      {sideSeats.length > 0 && (
-                        <div className="berth-side-row">
-                          {sideSeats.map(s => {
-                            const {color,shortColor} = seatColors[s.type];
-                            const isSel = seat === s.no;
-                            return (
-                              <button key={s.no} className="berth-seat" onClick={()=>setSeat(s.no)}
-                                style={{background:isSel?color:shortColor,border:`1.5px solid ${isSel?color:color+'60'}`,color:isSel?'#fff':color,boxShadow:isSel?`0 2px 8px ${color}50`:'none'}}>
-                                <span className="berth-seat-no">{s.no}</span>
-                                <span className="berth-seat-type">{s.type}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Coach tail */}
-              <div style={{background:'linear-gradient(90deg,#2563eb,#1e3a5f)',padding:'4px 12px',textAlign:'center'}}>
-                <span style={{fontSize:'0.55rem',color:'rgba(255,255,255,.6)',fontWeight:700,letterSpacing:'1px'}}>← ENGINE END · GUARD END →</span>
-              </div>
-            </div>
-            <div style={{height:10}}/>
-          </div>
-        )}
-
-        {/* STEP 2: Name */}
-        {subStep===2 && (
-          <div style={{animation:'fadeUp .25s ease'}}>
-            <p style={{fontWeight:800,fontSize:'0.85rem',color:T.text,marginBottom:3}}>Your Name <span style={{color:T.textLight,fontWeight:500,fontSize:'0.75rem'}}>(optional)</span></p>
-            <p style={{fontSize:'0.68rem',color:T.textSub,marginBottom:12}}>Helps the vendor identify you at delivery</p>
-            <div style={{position:'relative',marginBottom:14}}>
-              <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:'1rem'}}>👤</span>
-              <input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Rahul Sharma"
-                style={{width:'100%',padding:'13px 13px 13px 40px',border:'1.5px solid #e5e7eb',borderRadius:10,fontSize:'0.92rem',color:T.text,background:'#fff',outline:'none',boxSizing:'border-box'}}/>
-            </div>
-
-            {/* Summary card */}
-            <div style={{background:'linear-gradient(135deg,#fff7ed,#fef9c3)',border:'1px solid #fed7aa',borderRadius:12,padding:'14px',marginBottom:8}}>
-              <p style={{fontSize:'0.6rem',fontWeight:800,color:'#9a3412',marginBottom:10,letterSpacing:'.5px'}}>✅ BOOKING SUMMARY</p>
-              {[
-                ['🚂','Train',`${trainNo} — ${TRAIN_NAMES[trainNo]||'Express Train'}`],
-                ['🚃','Coach',coach],
-                ['💺','Berth',`${seat}${seat ? ` (${COACH_LAYOUT.seatTypes[generateCoachSeats().find(s=>s.no===Number(seat))?.type]?.label||''})` : ''}`],
-                ['👤','Name',name||'—'],
-              ].map(([icon,label,val]) => (
-                <div key={label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                  <span style={{fontSize:'0.7rem',color:'#9a3412',display:'flex',gap:5,alignItems:'center'}}><span>{icon}</span>{label}</span>
-                  <span style={{fontWeight:800,fontSize:'0.76rem',color:'#c2410c',maxWidth:'60%',textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{val}</span>
-                </div>
-              ))}
-            </div>
-            <p style={{fontSize:'0.65rem',color:T.textSub,textAlign:'center'}}>🍽️ Next: Browse & add food to your order</p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* CTA */}
       <div style={{padding:'10px 14px 14px',background:'#fff',borderTop:'1px solid #f3f4f6',flexShrink:0}}>
-        <div style={{display:'flex',gap:8}}>
-          {subStep>0 && (
-            <button onClick={()=>setSubStep(s=>s-1)}
-              style={{padding:'11px 14px',background:'#f3f4f6',border:'none',borderRadius:10,color:T.textMid,fontWeight:700,cursor:'pointer',fontSize:'0.8rem'}}>← Back</button>
-          )}
-          <button onClick={next} disabled={!canNext}
-            style={{flex:1,padding:12,background:canNext?'linear-gradient(135deg,#e65c00,#f9a825)':'#e5e7eb',
-              color:canNext?'#fff':T.textSub,border:'none',borderRadius:10,fontSize:'0.88rem',fontWeight:800,
-              cursor:canNext?'pointer':'not-allowed',transition:'all .2s'}}>
-            {subStep===2
-              ? '🍽️ Browse Menu →'
-              : subStep===1
-                ? seat ? `Berth ${seat} — Continue →` : 'Select a berth first'
-                : coach ? `Coach ${coach} — Continue →` : 'Tap a coach first'}
-          </button>
-        </div>
+        <button onClick={handleNext}
+          style={{width:'100%',padding:13,background:'linear-gradient(135deg,#e65c00,#f9a825)',color:'#fff',border:'none',borderRadius:10,fontSize:'0.9rem',fontWeight:800,cursor:'pointer'}}>
+          🍽️ View Menu →
+        </button>
       </div>
     </div>
   );
@@ -519,7 +360,7 @@ function PCart({ cart, onAdd, onRem, onBack, onNext }) {
           </div>
         ))}
         <div style={{background:'#f9fafb',borderRadius:10,padding:11,marginTop:3,border:'1px solid #f3f4f6'}}>
-          {[['Item Total',`₹${total}`],['Delivery','FREE ✓'],['IRCTC Fee','Included']].map(([k,v]) => (
+          {[['Item Total',`₹${total}`],['Delivery','FREE ✓'],['Indian Railway Catering Fee','Included']].map(([k,v]) => (
             <div key={k} style={{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:'0.73rem',color:T.textSub}}>
               <span>{k}</span><span style={{fontWeight:700,color:v==='FREE ✓'?T.green:T.textMid}}>{v}</span>
             </div>
@@ -597,69 +438,211 @@ const PTRACK = [
   { label:'Delivered',         icon:'✅', sub:'Enjoy your meal! 🍽️' },
 ];
 
+/* ══════════════════════════════════════════════════════════════
+   STEP 4 — TRACKING  (Firebase-aware version)
+   
+   Replace your existing PTrack function with this one.
+   
+   Changes vs original:
+   ─ Steps 0→1→2 still auto-advance on timers (unchanged)
+   ─ Step 3 "Out for Delivery" → waits for vendor to click "📦 Pack"
+     (Firestore status becomes "Packed")
+   ─ Step 4 "Delivered"        → waits for vendor to click "✅ Deliver"
+     (Firestore status becomes "Delivered")
+   ─ useStore(s => s.orders) is already wired to onSnapshot in your
+     store.js, so this reacts to vendor changes in real-time.
+   ─ actions.addOrder is async — awaited properly.
+   ─ Nothing else changed (UI, styles, buttons are identical).
+══════════════════════════════════════════════════════════════ */
+
 function PTrack({ userInfo, orderInfo, payMethod, cart, onSetOrderId, onFeedback, onComplaint, onReset }) {
-  const [cur, setCur] = useState(0);
-  const [orderId]     = useState(()=>genId('IRCTC'));
+  const [cur, setCur]     = useState(0);
+  const [orderId]         = useState(() => genId('IRCTC'));
+  const [orderReady, setOrderReady] = useState(false); // true after addOrder resolves
   const done = cur === PTRACK.length - 1;
 
+  // Subscribe to live orders from Firestore (via your store's onSnapshot bridge)
+  const storeOrders = useStore(s => s.orders);
+
+  const onSetOrderIdRef = useRef(onSetOrderId);
+  useEffect(() => { onSetOrderIdRef.current = onSetOrderId; }, [onSetOrderId]);
+
+  // ── Place order in Firestore + start timers for steps 0-2 ──
   useEffect(() => {
-    const delays = [0,3000,7500,13000,19000];
-    const timers = delays.map((d,i)=>setTimeout(()=>setCur(i),d));
-    const items  = Object.entries(cart).map(([id,qty])=>({name:MENU.find(m=>m.id===+id)?.name||'',qty,price:MENU.find(m=>m.id===+id)?.price||0}));
-    const total  = items.reduce((s,it)=>s+it.price*it.qty,0);
-    actions.addOrder({ id:orderId, trainNo:userInfo.train, seat:`${userInfo.coach}-${userInfo.seat}`, coach:userInfo.coach, items, total, status:'Pending', time:now(), payment:payMethod==='upi'?'UPI':'Cash', vendorId:'V001', agentId:null, passengerName:userInfo.name||'Passenger' });
-    if (onSetOrderId) onSetOrderId(orderId);
-    return ()=>timers.forEach(clearTimeout);
+    const items = Object.entries(cart).map(([id, qty]) => ({
+      name:  MENU.find(m => m.id === +id)?.name  || '',
+      qty,
+      price: MENU.find(m => m.id === +id)?.price || 0,
+    }));
+    const total = items.reduce((s, it) => s + it.price * it.qty, 0);
+
+    // Write to Firestore (async — fire and don't block UI)
+    actions.addOrder({
+      id:            orderId,
+      trainNo:       userInfo.train,
+      seat:          `${userInfo.coach}-${userInfo.seat}`,
+      coach:         userInfo.coach,
+      items,
+      total,
+      status:        'Pending',
+      time:          now(),
+      payment:       payMethod === 'upi' ? 'UPI' : 'Cash',
+      vendorId:      'V001',
+      agentId:       null,
+      passengerName: userInfo.name || 'Passenger',
+    }).then(() => {
+      setOrderReady(true);
+      if (onSetOrderIdRef.current) onSetOrderIdRef.current(orderId);
+    });
+
+    // Auto-advance steps 0 → 1 → 2 (timers, same as before)
+    const t0 = setTimeout(() => setCur(0), 0);
+    const t1 = setTimeout(() => setCur(1), 3000);
+    const t2 = setTimeout(() => setCur(2), 7500);
+
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Watch Firestore for vendor status changes → advance steps 3 & 4 ──
+  useEffect(() => {
+    if (!orderReady) return; // wait until our doc is in Firestore
+    const order = storeOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if ((order.status === 'Packed' || order.status === 'Delivered') && cur < 3) {
+      setCur(3); // vendor clicked "📦 Pack" → Out for Delivery
+    }
+    if (order.status === 'Delivered' && cur < 4) {
+      setCur(4); // vendor clicked "✅ Deliver" → Delivered
+    }
+  }, [storeOrders, orderId, orderReady, cur]);
+
+  // ── UI — identical to your original ──
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
       <div style={{flex:1,overflowY:'auto',padding:'12px 14px'}}>
+
+        {/* Order summary card */}
         <div style={{background:'linear-gradient(135deg,#c2410c,#e65c00,#f9a825)',borderRadius:12,padding:'13px',color:'#fff',marginBottom:12}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:9}}>
-            <div><div style={{fontSize:'0.56rem',opacity:.8}}>ORDER ID</div><div style={{fontWeight:900,fontSize:'0.88rem'}}>{orderId}</div></div>
-            <div style={{textAlign:'right'}}><div style={{fontSize:'0.56rem',opacity:.8}}>TOTAL</div><div style={{fontWeight:900,fontSize:'0.96rem'}}>₹{orderInfo.total}</div></div>
+            <div>
+              <div style={{fontSize:'0.56rem',opacity:.8}}>ORDER ID</div>
+              <div style={{fontWeight:900,fontSize:'0.88rem'}}>{orderId}</div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:'0.56rem',opacity:.8}}>TOTAL</div>
+              <div style={{fontWeight:900,fontSize:'0.96rem'}}>₹{orderInfo.total}</div>
+            </div>
           </div>
           <div style={{display:'flex',justifyContent:'space-between',background:'rgba(255,255,255,.12)',borderRadius:8,padding:'6px 10px'}}>
-            {[['COACH',userInfo.coach],['BERTH',userInfo.seat],['ETA',orderInfo.eta],['PAY',payMethod==='upi'?'📱 UPI':'💵 Cash']].map(([k,v]) => (
-              <div key={k}><div style={{fontSize:'0.52rem',opacity:.75}}>{k}</div><div style={{fontWeight:800,fontSize:'0.7rem'}}>{v}</div></div>
+            {[
+              ['COACH', userInfo.coach],
+              ['BERTH', userInfo.seat],
+              ['ETA',   orderInfo.eta],
+              ['PAY',   payMethod === 'upi' ? '📱 UPI' : '💵 Cash'],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <div style={{fontSize:'0.52rem',opacity:.75}}>{k}</div>
+                <div style={{fontWeight:800,fontSize:'0.7rem'}}>{v}</div>
+              </div>
             ))}
           </div>
         </div>
 
+        {/* Live tracking steps */}
         <p style={{fontSize:'0.66rem',fontWeight:800,color:T.textMid,marginBottom:9,letterSpacing:'.5px'}}>🔴 LIVE TRACKING</p>
         <div style={{background:'#fff',borderRadius:12,padding:'13px',border:'1px solid #f3f4f6',marginBottom:12}}>
-          {PTRACK.map((step,i) => {
-            const isDone=i<cur, isActive=i===cur;
+          {PTRACK.map((step, i) => {
+            const isDone   = i < cur;
+            const isActive = i === cur;
+            // Steps 3 & 4 not yet reached — show a "waiting for vendor" hint
+            const waitingForVendor = i >= 3 && cur < i;
+
             return (
-              <div key={i} style={{display:'flex',gap:9,paddingBottom:i<PTRACK.length-1?16:0,position:'relative'}}>
-                {i<PTRACK.length-1 && <div style={{position:'absolute',left:14,top:32,width:2,height:'calc(100% - 16px)',background:isDone?T.orange:'#f3f4f6',transition:'background .5s'}}/>}
-                <div style={{width:30,height:30,borderRadius:'50%',flexShrink:0,zIndex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:isDone?'0.72rem':'0.88rem',background:isDone||isActive?T.orange:'#f9fafb',border:`2px solid ${isDone||isActive?T.orange:'#e5e7eb'}`,transition:'all .4s',color:isDone||isActive?'#fff':'#9ca3af',fontWeight:800}}>
-                  {isDone?'✓':step.icon}
+              <div key={i} style={{display:'flex',gap:9,paddingBottom:i < PTRACK.length - 1 ? 16 : 0,position:'relative'}}>
+                {/* Connector line */}
+                {i < PTRACK.length - 1 && (
+                  <div style={{
+                    position:'absolute',left:14,top:32,width:2,
+                    height:'calc(100% - 16px)',
+                    background: isDone ? T.orange : '#f3f4f6',
+                    transition:'background .5s',
+                  }}/>
+                )}
+
+                {/* Step circle */}
+                <div style={{
+                  width:30,height:30,borderRadius:'50%',flexShrink:0,zIndex:1,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize: isDone ? '0.72rem' : '0.88rem',
+                  background: isDone || isActive ? T.orange : '#f9fafb',
+                  border: `2px solid ${isDone || isActive ? T.orange : '#e5e7eb'}`,
+                  transition:'all .4s',
+                  color: isDone || isActive ? '#fff' : '#9ca3af',
+                  fontWeight:800,
+                }}>
+                  {isDone ? '✓' : step.icon}
                 </div>
+
+                {/* Step label */}
                 <div style={{paddingTop:3}}>
-                  <div style={{fontSize:'0.78rem',fontWeight:800,color:isDone||isActive?T.text:'#9ca3af',display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{fontSize:'0.78rem',fontWeight:800,color: isDone || isActive ? T.text : '#9ca3af',display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
                     {step.label}
-                    {isActive && <span style={{fontSize:'0.52rem',fontWeight:800,background:'#fff7ed',color:T.orange,padding:'1px 6px',borderRadius:99,border:'1px solid #fed7aa'}}>NOW</span>}
+
+                    {isActive && (
+                      <span style={{fontSize:'0.52rem',fontWeight:800,background:'#fff7ed',color:T.orange,padding:'1px 6px',borderRadius:99,border:'1px solid #fed7aa'}}>
+                        NOW
+                      </span>
+                    )}
+
+                    {/* Waiting hints — only shown before vendor acts */}
+                    {waitingForVendor && i === 3 && (
+                      <span style={{fontSize:'0.52rem',fontWeight:700,background:'#f3f4f6',color:'#9ca3af',padding:'1px 6px',borderRadius:99}}>
+                        ⏳ Vendor packing
+                      </span>
+                    )}
+                    {waitingForVendor && i === 4 && (
+                      <span style={{fontSize:'0.52rem',fontWeight:700,background:'#f3f4f6',color:'#9ca3af',padding:'1px 6px',borderRadius:99}}>
+                        ⏳ Awaiting delivery
+                      </span>
+                    )}
                   </div>
-                  {(isDone||isActive) && <div style={{fontSize:'0.63rem',color:T.textSub,marginTop:1}}>{step.sub}</div>}
+
+                  {(isDone || isActive) && (
+                    <div style={{fontSize:'0.63rem',color:T.textSub,marginTop:1}}>{step.sub}</div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
+        {/* Delivered celebration card */}
         {done && (
           <div style={{background:'linear-gradient(135deg,#fff7ed,#fef9c3)',borderRadius:12,padding:'18px',textAlign:'center',border:'1px solid #fed7aa',marginBottom:12}}>
             <div style={{fontSize:'2.2rem',marginBottom:5}}>🎉</div>
             <div style={{fontWeight:900,color:'#c2410c',fontSize:'1.05rem',marginBottom:3}}>Order Delivered!</div>
             <p style={{fontSize:'0.68rem',color:'#9a3412',marginBottom:11}}>Hope you enjoy your meal 🍽️</p>
-            {payMethod==='cod' && <div style={{marginBottom:11,padding:'7px 11px',background:'#fff',borderRadius:8,border:'1px solid #fed7aa',fontSize:'0.68rem',color:'#9a3412',fontWeight:700}}>💵 Please pay ₹{orderInfo.total} to the delivery agent</div>}
+            {payMethod === 'cod' && (
+              <div style={{marginBottom:11,padding:'7px 11px',background:'#fff',borderRadius:8,border:'1px solid #fed7aa',fontSize:'0.68rem',color:'#9a3412',fontWeight:700}}>
+                💵 Please pay ₹{orderInfo.total} to the delivery agent
+              </div>
+            )}
             <div style={{display:'flex',gap:7,justifyContent:'center',marginBottom:9}}>
-              <button onClick={onFeedback} style={{padding:'9px 16px',background:'linear-gradient(135deg,#7c3aed,#a855f7)',color:'#fff',border:'none',borderRadius:8,fontWeight:800,cursor:'pointer',fontSize:'0.76rem'}}>⭐ Rate Order</button>
-              <button onClick={onComplaint} style={{padding:'9px 13px',background:'#fff',color:T.red,border:`1.5px solid ${T.red}`,borderRadius:8,fontWeight:700,cursor:'pointer',fontSize:'0.76rem'}}>⚠️ Complaint</button>
+              <button onClick={onFeedback}
+                style={{padding:'9px 16px',background:'linear-gradient(135deg,#7c3aed,#a855f7)',color:'#fff',border:'none',borderRadius:8,fontWeight:800,cursor:'pointer',fontSize:'0.76rem'}}>
+                ⭐ Rate Order
+              </button>
+              <button onClick={onComplaint}
+                style={{padding:'9px 13px',background:'#fff',color:T.red,border:`1.5px solid ${T.red}`,borderRadius:8,fontWeight:700,cursor:'pointer',fontSize:'0.76rem'}}>
+                ⚠️ Complaint
+              </button>
             </div>
-            <button onClick={onReset} style={{padding:'7px 18px',background:'#f3f4f6',color:T.textMid,border:'none',borderRadius:8,fontWeight:700,cursor:'pointer',fontSize:'0.7rem'}}>↺ Order Again</button>
+            <button onClick={onReset}
+              style={{padding:'7px 18px',background:'#f3f4f6',color:T.textMid,border:'none',borderRadius:8,fontWeight:700,cursor:'pointer',fontSize:'0.7rem'}}>
+              ↺ Order Again
+            </button>
           </div>
         )}
       </div>
@@ -923,7 +906,7 @@ function PComplaint({ userInfo }) {
         )}
         <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,padding:'9px 11px',marginBottom:14,display:'flex',gap:7}}>
           <span>ℹ️</span>
-          <p style={{fontSize:'0.66rem',color:'#1e40af',lineHeight:1.5}}>Our IRCTC team reviews complaints within 2 hours. Urgent: call <strong>1800-111-139</strong></p>
+          <p style={{fontSize:'0.66rem',color:'#1e40af',lineHeight:1.5}}>Our Indian Railway team reviews complaints within 2 hours. Urgent: call <strong>1800-111-139</strong></p>
         </div>
       </div>
       <div style={{padding:'9px 14px 13px',background:'#fff',borderTop:'1px solid #f3f4f6',flexShrink:0}}>
@@ -1039,7 +1022,7 @@ function PHelpPage({ onContact }) {
         ))}
         <div style={{background:'linear-gradient(135deg,#fef2f2,#fff7ed)',border:'1px solid #fecaca',borderRadius:12,padding:'13px',marginTop:6,marginBottom:14}}>
           <p style={{fontWeight:800,fontSize:'0.78rem',color:T.red,marginBottom:6}}>🚨 Emergency Contacts</p>
-          {[['IRCTC Catering Helpline','1800-111-139'],['Railway General Helpline','139'],['Women Safety Helpline','182']].map(([label,num]) => (
+          {[['Indian Railway Catering Helpline','1800-111-139'],['Railway General Helpline','139'],['Women Safety Helpline','182']].map(([label,num]) => (
             <div key={label} style={{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:'0.72rem'}}>
               <span style={{color:T.textMid}}>{label}</span>
               <span style={{fontWeight:800,color:T.red}}>{num}</span>

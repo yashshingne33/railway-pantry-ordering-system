@@ -1,9 +1,9 @@
 import { useStore, GLOBAL_STYLES } from "./store";
 import AdminDashboard from "./AdminDashboard";
 import VendorPanel from "./VendorPanel";
-import AgentPanel from "./AgentPanel";
 import PassengerApp from "./PassengerApp";
 import { useState } from "react";
+import logo from './assets/logo.png';
 
 export default function PantrySystem() {
   const [view, setView] = useState('passenger');
@@ -13,8 +13,7 @@ export default function PantrySystem() {
   const navItems = [
     { id:'admin',     label:'Admin',  icon:'🖥️' },
     { id:'vendor',    label:'Vendor', icon:'👤' },
-    { id:'agent',     label:'Agent',  icon:'🚶' },
-    { id:'passenger', label:'Order',  icon:'📱' },
+    { id:'passenger', label:'PassengerApp',  icon:'📱' },
   ];
 
   return (
@@ -23,9 +22,19 @@ export default function PantrySystem() {
 
       <nav className="top-nav">
         <div className="nav-brand">
-          <span style={{fontSize:'1.3rem'}}>🚂</span>
+          <img
+            src={logo}
+            alt="Railway Logo"
+            style={{
+              width: '42px',
+              height: '42px',
+              objectFit: 'contain',
+              marginRight: '10px'
+            }}
+          />
+          
           <div>
-            <p className="brand-name">IRCTC Pantry System</p>
+            <p className="brand-name">Indian Railway Pantry System</p>
             <p className="brand-sub">NGP Division</p>
           </div>
         </div>
@@ -49,7 +58,6 @@ export default function PantrySystem() {
           <div className="inner-content">
             {view==='admin'  && <AdminDashboard/>}
             {view==='vendor' && <VendorPanel/>}
-            {view==='agent'  && <AgentPanel/>}
           </div>
         )}
       </main>
