@@ -85,7 +85,6 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
 ══════════════════════════════════════════════════════════════ */
 function PCoachSeatSelect({ trainNo, onNext }) {
   const [station, setStation] = useState('');
-  const [platform, setPlatform] = useState('');
   const [coach, setCoach] = useState('');
   const [seat, setSeat] = useState('');
   const [name, setName] = useState('');
