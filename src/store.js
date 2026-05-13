@@ -82,6 +82,7 @@ export function useFirestore(colName) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const colRef = collection(db, colName);
     const unsub = onSnapshot(colRef, (snap) => {
