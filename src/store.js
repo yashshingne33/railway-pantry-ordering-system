@@ -120,6 +120,7 @@ COLLECTIONS.forEach(key => {
 
 export function useStore(selector) {
   const [val, setVal] = useState(() => selector(getState()));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setVal(selector(getState()));
     return subscribe((s) => setVal(selector(s)));
