@@ -163,6 +163,10 @@ export const actions = {
     await updateDoc(doc(db, 'complaints', id), { status: 'Resolved' });
   },
 
+  updateComplaint: async (id, patch) => {
+    await updateDoc(doc(db, 'complaints', id), patch);
+  },
+
   /* Feedback */
   addFeedback: async (f) => {
     const { id, ...rest } = f;
