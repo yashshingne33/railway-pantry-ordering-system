@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useStore, actions } from "./store";
-import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "./store";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -118,7 +119,7 @@ export default function VendorPanel() {
   const [cart, setCart]             = useState({});
   const [selTrain, setSelTrain]     = useState(TRAINS_ASSIGNED[0].no);
   const [pay, setPay]               = useState("UPI");
-  const [toast, setToast]           = useState("");
+  const [toast, setToast]           = useState(" null");
   const [filter, setFilter]         = useState("All");
   const [menuCat, setMenuCat]       = useState("All");
   const [cNote, setCNote]           = useState({});
@@ -285,32 +286,6 @@ export default function VendorPanel() {
           </button>
         </div>
       </div>
-
-      {/* ── Revenue Banner ───────────────────────────────────────────────────
-      <div style={{
-        background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)',
-        borderRadius:12, padding:'14px 18px', marginBottom:16,
-        display:'flex', gap:0, position:'relative', overflow:'hidden',
-      }}>
-        <div style={{ flex:1, borderRight:'1px solid rgba(255,255,255,.15)', paddingRight:18 }}>
-          <p style={{ margin:0, fontSize:'0.55rem', fontWeight:700, color:'rgba(255,255,255,.6)', letterSpacing:'1.5px', textTransform:'uppercase' }}>TOTAL REVENUE EARNED</p>
-          <p style={{ margin:'3px 0 1px', fontSize:'1.7rem', fontWeight:900, color:'#fff', letterSpacing:'-1px', lineHeight:1 }}>₹{totalSales.toLocaleString('en-IN')}</p>
-          <p style={{ margin:0, fontSize:'0.6rem', color:'rgba(255,255,255,.55)' }}>{myOrders.filter(o=>o.status==='Delivered').length} orders delivered</p>
-        </div>
-        <div style={{ flex:1, borderRight:'1px solid rgba(255,255,255,.15)', padding:'0 18px' }}>
-          <p style={{ margin:0, fontSize:'0.55rem', fontWeight:700, color:'rgba(255,255,255,.6)', letterSpacing:'1.5px', textTransform:'uppercase' }}>PENDING REVENUE</p>
-          <p style={{ margin:'3px 0 1px', fontSize:'1.3rem', fontWeight:800, color:'#fde68a', lineHeight:1 }}>₹{pendingRev.toLocaleString('en-IN')}</p>
-          <p style={{ margin:0, fontSize:'0.6rem', color:'rgba(255,255,255,.55)' }}>In kitchen / packed</p>
-        </div>
-        <div style={{ flex:1, padding:'0 0 0 18px' }}>
-          <p style={{ margin:0, fontSize:'0.55rem', fontWeight:700, color:'rgba(255,255,255,.6)', letterSpacing:'1.5px', textTransform:'uppercase' }}>PASSENGER RATING</p>
-          <p style={{ margin:'3px 0 1px', fontSize:'1.3rem', fontWeight:800, color:avgRating>=4?'#6ee7b7':avgRating>=3?'#fde68a':'#fca5a5', lineHeight:1 }}>
-            {avgRating ? `⭐ ${avgRating}/5` : '—'}
-          </p>
-          <p style={{ margin:0, fontSize:'0.6rem', color:'rgba(255,255,255,.55)' }}>{myFeedback.length} passenger reviews</p>
-        </div>
-        <div style={{ position:'absolute', right:-15, top:-15, width:80, height:80, borderRadius:'50%', background:'rgba(255,255,255,.05)'}}/>
-      </div> */}
 
       {/* Stat Cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:12, marginBottom:20 }}>
