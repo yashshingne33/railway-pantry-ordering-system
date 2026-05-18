@@ -138,7 +138,6 @@ export default function VendorPanel() {
   // ── Revenue ───────────────────────────────────────────────────────────────
   const myOrders   = orders.filter(o => myTrains.includes(o.trainNo));
   const totalSales = myOrders.filter(o => o.status === "Delivered").reduce((s, o) => s + o.total, 0);
-  const pendingRev = myOrders.filter(o => ["Pending","Preparing","Packed"].includes(o.status)).reduce((s,o)=>s+o.total,0);
   const pendingCnt = myOrders.filter(o => o.status === "Pending").length;
   const preparingCnt = myOrders.filter(o => o.status === "Preparing").length;
   const packedCnt  = myOrders.filter(o => o.status === "Packed").length;

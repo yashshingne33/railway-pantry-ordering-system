@@ -76,13 +76,11 @@ export default function AdminDashboard() {
   const totalRev        = deliveredOrders.reduce((s, o) => s + o.total, 0);
   const pendingRev      = orders.filter(o => ['Pending','Preparing','Packed'].includes(o.status)).reduce((s,o) => s + o.total, 0);
   const delivered       = deliveredOrders.length;
-  const _pending        = orders.filter(o => o.status === 'Pending').length;
   const open            = complaints.filter(c => c.status === 'Open').length;
 
   /* ── Rating analytics ── */
   const avgRating   = feedback.length ? (feedback.reduce((s,f) => s + f.rating, 0) / feedback.length).toFixed(1) : null;
   const fiveStars   = feedback.filter(f => f.rating === 5).length;
-  const _recentRatings = [...feedback].reverse().slice(0, 5); // last 5
 
   const toast = (msg) => { setNewToast(msg); setTimeout(() => setNewToast(''), 3000); };
 
