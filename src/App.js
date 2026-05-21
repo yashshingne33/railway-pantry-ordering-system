@@ -39,13 +39,18 @@ import AdminDashboard from './AdminDashboard';
 import VendorPanel from './VendorPanel';
 import PassengerApp from './PassengerApp';
 import VendorLogin from './VendorLogin';
+import AdminLogin from './AdminLogin';
 
 export default function App() {
   return (
     <Routes>
       <Route element={<PantrySystem />}>
         <Route path="/app"        element={<PassengerApp prefillTrain="12139" />} />
-        <Route path="/app/admin"  element={<AdminDashboard />} />
+        <Route path="/app/admin" element={
+          <AdminLogin>
+            {(admin, logout) => <AdminDashboard admin={admin} onLogout={logout} />}
+          </AdminLogin>
+        } />
         <Route path="/app/vendor" element={
           <VendorLogin>
             {(vendor, logout) => <VendorPanel vendor={vendor} onLogout={logout} />}
