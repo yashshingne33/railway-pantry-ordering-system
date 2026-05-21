@@ -25,13 +25,6 @@ export const db = getFirestore(app);
    SEED DATA — written to Firestore once if collections empty
 ══════════════════════════════════════════════════════════════ */
 const SEED = {
-  orders: [
-    { id:'ORD-001', trainNo:'12139', seat:'B2-45', coach:'B2', items:[{name:'Veg Thali',qty:2,price:120}], total:240, status:'Delivered', time:'09:15 AM', payment:'UPI', vendorId:'V001', agentId:'D001', passengerName:'Rahul S.' },
-    { id:'ORD-002', trainNo:'12139', seat:'S4-12', coach:'S4', items:[{name:'Tea',qty:3,price:15},{name:'Samosa (2 pcs)',qty:2,price:30}], total:105, status:'Preparing', time:'09:42 AM', payment:'Cash', vendorId:'V002', agentId:null, passengerName:'Priya V.' },
-    { id:'ORD-003', trainNo:'12139', seat:'A1-3',  coach:'A1', items:[{name:'Non-Veg Thali',qty:1,price:150}], total:150, status:'Pending', time:'10:05 AM', payment:'UPI', vendorId:null, agentId:null, passengerName:'Amit J.' },
-    { id:'ORD-004', trainNo:'12139', seat:'B1-22', coach:'B1', items:[{name:'Water Bottle 1L',qty:4,price:20},{name:'Cold Coffee',qty:2,price:60}], total:200, status:'Delivered', time:'10:18 AM', payment:'UPI', vendorId:'V001', agentId:'D002', passengerName:'Sunita R.' },
-    { id:'ORD-005', trainNo:'12139', seat:'S2-7',  coach:'S2', items:[{name:'Upma',qty:2,price:45},{name:'Tea',qty:2,price:15}], total:120, status:'Preparing', time:'10:30 AM', payment:'Cash', vendorId:'V002', agentId:null, passengerName:'Vikram S.' },
-  ],
   complaints: [
     { id:'C001', name:'Rahul Sharma', seat:'B2-12', trainNo:'12139', issue:'Food was cold and stale', status:'Open', time:'09:30 AM' },
     { id:'C002', name:'Priya Verma',  seat:'S3-44', trainNo:'12139', issue:'Wrong order delivered',   status:'Open', time:'10:10 AM' },
@@ -44,12 +37,6 @@ const SEED = {
   qrCodes: [
     { id:'QR001', trainNo:'12139', trainName:'Sewagram Express',  createdAt:'08:00 AM', active:true },
     { id:'QR002', trainNo:'22105', trainName:'Vidarbha Express',  createdAt:'07:30 AM', active:true },
-  ],
-  vendors: [
-    { id:'V001', name:'Ramesh Kumar', train:'12139', sales:4500, orders:0, rating:4.2, status:'Active' },
-    { id:'V002', name:'Suresh Patel', train:'12139', sales:3200, orders:0, rating:3.8, status:'Active' },
-    { id:'V003', name:'Meena Devi',   train:'22105', sales:5100, orders:0, rating:4.6, status:'Active' },
-    { id:'V004', name:'Ajay Singh',   train:'12139', sales:1800, orders:0, rating:3.2, status:'Suspended' },
   ],
   agents: [
     { id:'D001', name:'Raju Yadav', train:'12139', status:'Active', deliveries:22 },

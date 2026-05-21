@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useStore, actions } from "./store";
-// import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "./store";
 
