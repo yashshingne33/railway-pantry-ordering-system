@@ -275,17 +275,13 @@ export default function VendorPanel({ vendor }) {
             <p style={{ margin:0, fontSize:"0.72rem", color:"#64748b" }}>Ramesh Kumar · NGP Division</p>
           </div>
         </div>
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <select value={filter} onChange={e=>setFilter(e.target.value)}
-            style={{ padding:"7px 12px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", fontSize:"0.8rem", color:"#334155", cursor:"pointer" }}>
-            <option value="All">All Trains</option>
-            {TRAINS_ASSIGNED.map(t => <option key={t.no} value={t.no}>{t.no} – {t.name}</option>)}
-          </select>
-          <button onClick={()=>setShowNew(true)}
-            style={{ background:"#1e3a5f", color:"#fff", border:"none", borderRadius:8, padding:"8px 16px", fontWeight:600, fontSize:"0.82rem", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-            ➕ Generate Order QR
-          </button>
-        </div>
+<div style={{ display:"flex", gap:8, alignItems:"center" }}>
+  <select value={filter} onChange={e=>setFilter(e.target.value)}
+    style={{ padding:"7px 12px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", fontSize:"0.8rem", color:"#334155", cursor:"pointer" }}>
+    <option value="All">All Trains</option>
+    {TRAINS_ASSIGNED.map(t => <option key={t.no} value={t.no}>{t.no} – {t.name}</option>)}
+  </select>
+</div>
       </div>
 
       {/* Stat Cards */}

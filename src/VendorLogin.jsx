@@ -1,37 +1,21 @@
-/**
- * VendorLogin.jsx
- * ─────────────────────────────────────────────────────────
- * Standalone login page for vendors.
- * Reads credentials from localStorage ("irctc_vendors")
- * which is written by AdminDashboard when a vendor is created.
- *
- * Usage in PantrySystem / App.jsx:
- *
- *   import VendorLogin from './VendorLogin';
- *   import VendorPanel from './VendorPanel';
- *
- *   // replace your existing vendor view with:
- *   {view === 'vendor' && (
- *     <VendorLogin>
- *       {(vendor, logout) => <VendorPanel vendor={vendor} onLogout={logout} />}
- *     </VendorLogin>
- *   )}
- * ─────────────────────────────────────────────────────────
- */
-
 import { useState } from "react";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { db } from "./store";
 import RealQR from './RealQR';
 
-/* ── Session helpers ──────────────────────────────────────────────────────── */
 const SESSION_KEY = "irctc_vendor_session";
-const VENDORS_KEY = "irctc_vendors";
 
-const loadVendors  = () => { try { return JSON.parse(localStorage.getItem(VENDORS_KEY) || "[]"); } catch { return []; } };
 const saveSession  = (v) => { try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(v)); } catch {} };
 const loadSession  = ()  => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); } catch { return null; } };
 const clearSession = ()  => { try { sessionStorage.removeItem(SESSION_KEY); } catch {} };
 
-/* ── Mini QR (same algo as AdminDashboard) ───────────────────────────────── */
+const loadVendors = async () => {
+  try {
+    const snap = await getDocs(collection(db, "vendors"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch { return []; }
+};
+
 const MiniQR = ({ trainNo, size = 130 }) => {
   const seed  = trainNo.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const rng   = (n) => { let x = seed * 9301 + n * 49297; return ((x % 233280) / 233280); };
@@ -62,9 +46,6 @@ const MiniQR = ({ trainNo, size = 130 }) => {
   );
 };
 
-/* ══════════════════════════════════════════════════════════════════════════
-   LOGIN FORM
-══════════════════════════════════════════════════════════════════════════ */
 function LoginForm({ onSuccess }) {
   const [vendorId, setVendorId] = useState("");
   const [password, setPassword] = useState("");
@@ -81,16 +62,12 @@ function LoginForm({ onSuccess }) {
       triggerShake();
       return;
     }
-
     setLoading(true);
     setError("");
 
-    // Small delay to feel like a real auth call
-    await new Promise(r => setTimeout(r, 800));
-
-    const vendors = loadVendors();
-    const match   = vendors.find(
-      v => v.id       === vendorId.trim().toUpperCase() &&
+    const vendors = await loadVendors();
+    const match = vendors.find(
+      v => v.id === vendorId.trim().toUpperCase() &&
            v.password === password.trim().toUpperCase()
     );
 
@@ -121,14 +98,11 @@ function LoginForm({ onSuccess }) {
       padding: 16, fontFamily: "'Segoe UI', sans-serif",
       overflow: "hidden",
     }}>
-      {/* Background decoration */}
       <div style={{ position:"absolute", width:400, height:400, borderRadius:"50%", background:"rgba(255,255,255,0.03)", top:-100, right:-100 }}/>
       <div style={{ position:"absolute", width:300, height:300, borderRadius:"50%", background:"rgba(255,255,255,0.03)", bottom:-80, left:-80 }}/>
       <div style={{ position:"absolute", width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.04)", top:"40%", left:"10%" }}/>
 
       <div style={{ width:"100%", maxWidth:420, animation:"vl-up 0.45s cubic-bezier(.22,.68,0,1.2)" }}>
-
-        {/* Logo */}
         <div style={{ textAlign:"center", marginBottom:28 }}>
           <div style={{
             width:70, height:70, borderRadius:20,
@@ -146,7 +120,6 @@ function LoginForm({ onSuccess }) {
           </div>
         </div>
 
-        {/* Card */}
         <div style={{
           background:"#fff", borderRadius:20, padding:"28px 24px",
           boxShadow:"0 30px 80px rgba(0,0,0,0.4)",
@@ -159,7 +132,6 @@ function LoginForm({ onSuccess }) {
             </div>
           </div>
 
-          {/* Vendor ID */}
           <div style={{ marginBottom:14 }}>
             <label style={lbl}>Vendor ID</label>
             <div style={{ position:"relative" }}>
@@ -175,7 +147,6 @@ function LoginForm({ onSuccess }) {
             </div>
           </div>
 
-          {/* Password */}
           <div style={{ marginBottom:20 }}>
             <label style={lbl}>Password</label>
             <div style={{ position:"relative" }}>
@@ -196,7 +167,6 @@ function LoginForm({ onSuccess }) {
             </div>
           </div>
 
-          {/* Error */}
           {error && (
             <div style={{
               background:"#fff5f5", border:"1px solid #fca5a5", borderRadius:8,
@@ -209,7 +179,6 @@ function LoginForm({ onSuccess }) {
             </div>
           )}
 
-          {/* Login button */}
           <button
             onClick={handleLogin}
             disabled={loading}
@@ -235,7 +204,6 @@ function LoginForm({ onSuccess }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div style={{ textAlign:"center", marginTop:18, fontSize:"0.62rem", color:"rgba(255,255,255,0.3)" }}>
           IRCTC Pantry Management System · NGP Division · v2.0
         </div>
@@ -251,13 +219,30 @@ function LoginForm({ onSuccess }) {
   );
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   VENDOR DASHBOARD HEADER BAR
-   Shown above VendorPanel once logged in — shows vendor info + logout
-══════════════════════════════════════════════════════════════════════════ */
 function VendorHeader({ vendor, onLogout }) {
   const [showQR, setShowQR] = useState(false);
-  
+
+  const downloadQR = () => {
+    const wrapper = document.querySelector('[data-qr-vendor-header]');
+    if (!wrapper) return;
+    const svg = wrapper.querySelector('svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    canvas.width = 300; canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 300, 300);
+      ctx.drawImage(img, 0, 0, 300, 300);
+      const a = document.createElement('a');
+      a.download = `QR-Train-${vendor.trainNo || vendor.train}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
 
   return (
     <>
@@ -267,7 +252,6 @@ function VendorHeader({ vendor, onLogout }) {
         display:"flex", alignItems:"center", justifyContent:"space-between",
         flexShrink:0, flexWrap:"wrap", gap:8,
       }}>
-        {/* Left: vendor info */}
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <div style={{
             width:38, height:38, borderRadius:10,
@@ -285,7 +269,6 @@ function VendorHeader({ vendor, onLogout }) {
           </div>
         </div>
 
-        {/* Right: QR + Logout */}
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <button
             onClick={() => setShowQR(true)}
@@ -310,7 +293,6 @@ function VendorHeader({ vendor, onLogout }) {
         </div>
       </div>
 
-      {/* QR Modal */}
       {showQR && (
         <div
           onClick={() => setShowQR(false)}
@@ -335,18 +317,21 @@ function VendorHeader({ vendor, onLogout }) {
             </div>
             <div style={{ fontSize:"0.78rem", color:"#64748b", marginBottom:18 }}>{vendor.trainName}</div>
 
-            <div style={{
-              display:"inline-block", padding:16,
-              background:"#f8fafc", borderRadius:16,
-              border:"2px solid #e2e8f0",
-              boxShadow:"0 4px 20px rgba(0,0,0,0.08)",
-              marginBottom:14,
-            }}>
-            <RealQR
-              url={`${window.location.origin}/app?train=${vendor.trainNo || vendor.train}`}
-              size={160}
-              darkColor="#1e3a5f"
-            />            </div>
+            <div
+              data-qr-vendor-header
+              style={{
+                display:"inline-block", padding:16,
+                background:"#f8fafc", borderRadius:16,
+                border:"2px solid #e2e8f0",
+                boxShadow:"0 4px 20px rgba(0,0,0,0.08)",
+                marginBottom:14,
+              }}>
+              <RealQR
+                url={`${window.location.origin}/app?train=${vendor.trainNo || vendor.train}`}
+                size={160}
+                darkColor="#1e3a5f"
+              />
+            </div>
 
             <div style={{ fontSize:"0.7rem", color:"#64748b", marginBottom:6 }}>
               Passengers scan this to order food
@@ -358,10 +343,19 @@ function VendorHeader({ vendor, onLogout }) {
               border:"1px solid #dbeafe", display:"inline-block",
               marginBottom:20,
             }}>
-{window.location.origin}/app?train={vendor.trainNo || vendor.train}
+              {window.location.origin}/app?train={vendor.trainNo || vendor.train}
             </div>
 
             <div style={{ display:"flex", gap:8 }}>
+              <button
+                onClick={downloadQR}
+                style={{
+                  flex:1, padding:"11px",
+                  background:"#f0fdf4",
+                  color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:10,
+                  fontSize:"0.82rem", fontWeight:700, cursor:"pointer",
+                }}
+              >⬇ Download PNG</button>
               <button
                 onClick={() => setShowQR(false)}
                 style={{
@@ -380,25 +374,18 @@ function VendorHeader({ vendor, onLogout }) {
   );
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   MAIN EXPORT — VendorLogin wrapper
-   Wraps the children (VendorPanel) with login gate + vendor header bar.
-══════════════════════════════════════════════════════════════════════════ */
 export default function VendorLogin({ children }) {
   const [vendor, setVendor] = useState(() => loadSession());
 
   const handleLogin  = (v) => { saveSession(v); setVendor(v); };
   const handleLogout = ()  => { clearSession(); setVendor(null); };
 
-  // Not logged in → show login page
   if (!vendor) return <LoginForm onSuccess={handleLogin} />;
 
-  // Logged in → show header + VendorPanel
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
       <VendorHeader vendor={vendor} onLogout={handleLogout} />
       <div style={{ flex:1, overflowY:"auto" }}>
-        {/* Pass vendor + logout down to VendorPanel via render prop OR just children */}
         {typeof children === "function"
           ? children(vendor, handleLogout)
           : children}
@@ -407,10 +394,9 @@ export default function VendorLogin({ children }) {
   );
 }
 
-/* ── Shared style atoms ─────────────────────────────────────────────────── */
 const lbl    = { display:"block", fontSize:"0.68rem", fontWeight:700, color:"#374151", letterSpacing:"0.5px", textTransform:"uppercase", marginBottom:5, fontFamily:"sans-serif" };
 const inp    = { width:"100%", padding:"11px 12px", border:"1.5px solid #e5e7eb", borderRadius:9, fontSize:"0.85rem", color:"#111827", background:"#fff", outline:"none", boxSizing:"border-box", fontFamily:"sans-serif", transition:"border-color 0.15s, box-shadow 0.15s" };
-const errInp = { borderColor:"#fca5a5 !important", background:"#fff5f5" };
+const errInp = { borderColor:"#fca5a5", background:"#fff5f5" };
 
 const Spinner = () => (
   <span style={{ width:15, height:15, border:"2.5px solid rgba(255,255,255,0.35)", borderTopColor:"#fff", borderRadius:"50%", display:"inline-block", animation:"vl-spin 0.7s linear infinite" }}/>

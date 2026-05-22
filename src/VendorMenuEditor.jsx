@@ -349,14 +349,17 @@ export default function VendorMenuEditor({ vendor }) {
                   <div style={{ display:"flex", gap:5, flexShrink:0 }}>
                     <button onClick={() => moveUp(idx)}   style={iconBtn} title="Up">↑</button>
                     <button onClick={() => moveDown(idx)} style={iconBtn} title="Down">↓</button>
-                    <button onClick={() => toggleAvail(idx)}
-                      style={{ ...iconBtn,
-                        background:  item.available===false?"#d1fae5":"#fee2e2",
-                        color:       item.available===false?"#16a34a":"#dc2626",
-                        borderColor: item.available===false?"#6ee7b7":"#fecaca" }}
-                      title={item.available===false?"Show":"Hide"}>
-                      {item.available===false?"✓":"✕"}
-                    </button>
+<button onClick={() => toggleAvail(idx)}
+  style={{
+    padding:'4px 8px', borderRadius:6, cursor:'pointer', fontWeight:700,
+    fontSize:'0.65rem', border:'1px solid', minWidth:62,
+    background:  item.available===false ? "#d1fae5" : "#fee2e2",
+    color:       item.available===false ? "#16a34a" : "#dc2626",
+    borderColor: item.available===false ? "#6ee7b7" : "#fecaca",
+  }}
+  title={item.available===false ? "Enable item" : "Disable item"}>
+  {item.available===false ? "✓ Enable" : "✕ Disable"}
+</button>
                     <button onClick={() => deleteItem(idx)}
                       style={{ ...iconBtn, background:"#fef2f2", color:"#dc2626", borderColor:"#fecaca" }}
                       title="Delete">🗑</button>

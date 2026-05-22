@@ -3,17 +3,12 @@ import { useStore, actions, T, genId, now } from "./store";
 import { Badge, Chip, StatCard, TabBar, Section, QRCode } from "./store";
 import RealQR from './RealQR';
 
-
-/* ── Helpers for vendor credentials (localStorage, no backend needed) ─────── */
 const genVendorId = () => "V" + String(Math.floor(1000 + Math.random() * 9000));
 const genPassword = () => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 };
-const saveVendors = (v) => { try { localStorage.setItem("irctc_vendors", JSON.stringify(v)); } catch {} };
-const loadVendors = ()  => { try { return JSON.parse(localStorage.getItem("irctc_vendors") || "[]"); } catch { return []; } };
 
-/* ── Mini QR for credential modal ─────────────────────────────────────────── */
 const MiniQR = ({ trainNo, size = 100 }) => {
   const seed = trainNo.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   const rng  = (n) => { let x = seed * 9301 + n * 49297; return ((x % 233280) / 233280); };
@@ -49,17 +44,15 @@ export default function AdminDashboard() {
   const feedback   = useStore(s => s.feedback);
   const qrCodes    = useStore(s => s.qrCodes);
 
-  // ── original state ──────────────────────────────────────────────────────────
   const [tab, setTab]           = useState('orders');
   const [showQR, setShowQR]     = useState(false);
   const [newTrain, setNewTrain] = useState('');
   const [newTrainName, setNewTrainName] = useState('');
   const [newToast, setNewToast] = useState('');
+  const [zoomQR, setZoomQR]     = useState(null);
 
-  // ── new: add vendor state ───────────────────────────────────────────────────
   const [showAddVendor, setShowAddVendor] = useState(false);
-  const [showCreds,     setShowCreds]     = useState(null);   // vendor obj after creation
-  const [localVendors,  setLocalVendors]  = useState(loadVendors);
+  const [showCreds,     setShowCreds]     = useState(null);
   const [vForm, setVForm] = useState({ name:'', phone:'', trainNo:'', trainName:'' });
   const [vErrors, setVErrors] = useState({});
 
@@ -73,7 +66,28 @@ export default function AdminDashboard() {
 
   const toast = (msg) => { setNewToast(msg); setTimeout(()=>setNewToast(''),3000); };
 
-  // ── QR generation (original) ────────────────────────────────────────────────
+  const downloadQR = (selector) => {
+    const wrapper = document.querySelector(`[data-qr-train="${selector}"]`);
+    if (!wrapper) return;
+    const svg = wrapper.querySelector('svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    canvas.width = 300; canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 300, 300);
+      ctx.drawImage(img, 0, 0, 300, 300);
+      const a = document.createElement('a');
+      a.download = `QR-Train-${selector}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
   const genQR = () => {
     if (!newTrain.trim()) return;
     actions.addQR({ id:genId('QR'), trainNo:newTrain, trainName:newTrainName||TRAIN_NAMES[newTrain]||'Express Train', createdAt:now(), active:true });
@@ -81,17 +95,15 @@ export default function AdminDashboard() {
     toast('QR Code generated successfully!');
   };
 
-  // ── Add vendor logic ────────────────────────────────────────────────────────
   const setV = (k) => (e) => { setVForm(f => ({...f, [k]: e.target.value})); setVErrors(er => ({...er, [k]:''})); };
 
   const handleAddVendor = async () => {
-      const e = {};
+    const e = {};
     if (!vForm.name.trim())     e.name    = "Required";
     if (!vForm.phone.trim())    e.phone   = "Required";
     if (!vForm.trainNo.trim())  e.trainNo = "Required";
     if (!vForm.trainName.trim()) e.trainNo = e.trainNo || "Train name required";
-    // one active vendor per train
-    if (localVendors.find(v => v.trainNo === vForm.trainNo.trim() && v.status === 'Active'))
+    if (vendors.find(v => v.trainNo === vForm.trainNo.trim() && v.status === 'Active'))
       e.trainNo = "An active vendor is already assigned to this train";
     if (Object.keys(e).length) { setVErrors(e); return; }
 
@@ -101,22 +113,14 @@ export default function AdminDashboard() {
       id: vendorId, password,
       name: vForm.name.trim(), phone: vForm.phone.trim(),
       trainNo: vForm.trainNo.trim(), trainName: vForm.trainName.trim(),
-      train: vForm.trainNo.trim(),   // also set train for store compatibility
+      train: vForm.trainNo.trim(),
       status: 'Active', sales: 0, orders: 0, rating: 0,
       createdAt: now(),
     };
 
-    const updated = [newVendor, ...localVendors];
-    setLocalVendors(updated);
-    saveVendors(updated);
-
-    // push into store so vendor table updates immediately
     actions.addVendor?.(newVendor);
-
     await actions.initTrainMenu(newVendor.trainNo, newVendor.trainName, newVendor.id, newVendor.name);
 
-
-    // ── AUTO-GENERATE QR for this vendor's train ──────────────────────────
     actions.addQR?.({
       id:        genId('QR'),
       trainNo:   newVendor.trainNo,
@@ -130,7 +134,7 @@ export default function AdminDashboard() {
     setShowAddVendor(false);
     setVForm({ name:'', phone:'', trainNo:'', trainName:'' });
     setVErrors({});
-    setShowCreds(newVendor);   // show credentials popup
+    setShowCreds(newVendor);
     toast('Vendor added & QR generated successfully!');
   };
 
@@ -140,7 +144,6 @@ export default function AdminDashboard() {
     setVErrors({});
   };
 
-  // ── inline styles (scoped, don't touch global CSS) ──────────────────────────
   const inp    = { width:'100%', padding:'9px 12px', border:'1.5px solid #e5e7eb', borderRadius:8, fontSize:'0.83rem', color:'#111827', outline:'none', boxSizing:'border-box', fontFamily:'sans-serif', transition:'border-color 0.15s' };
   const errInp = { borderColor:'#fca5a5', background:'#fff5f5' };
   const lbl    = { display:'block', fontSize:'0.68rem', fontWeight:700, color:'#374151', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:5 };
@@ -149,7 +152,6 @@ export default function AdminDashboard() {
   return (
     <div className="view">
 
-      {/* ── PAGE HEADER — original, unchanged ── */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Admin Dashboard</h1>
@@ -157,29 +159,25 @@ export default function AdminDashboard() {
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <span className="live-pill">🟢 LIVE</span>
-          <button className="btn-primary" onClick={()=>setShowQR(true)}>📲 Generate QR</button>
         </div>
       </div>
 
       {newToast && <div className="toast toast-green">{newToast}</div>}
 
-      {/* ── STAT CARDS — original, unchanged ── */}
       <div className="cards-grid">
         <StatCard icon="🚂" label="Active Trains"  value={3}                                                          accent="blue"   delay={0}/>
         <StatCard icon="💰" label="Revenue Today"   value={`₹${totalRev.toLocaleString('en-IN')}`}                    accent="green"  delay={60}/>
         <StatCard icon="📦" label="Total Orders"    value={orders.length}                                              accent="orange" delay={120}/>
-        <StatCard icon="✅" label="Delivered"        value={delivered} sub={`${Math.round(delivered/orders.length*100)}% rate`} accent="green" delay={180}/>
+        <StatCard icon="✅" label="Delivered"        value={delivered} sub={`${Math.round(delivered/(orders.length||1)*100)}% rate`} accent="green" delay={180}/>
         <StatCard icon="⏳" label="Pending"          value={pending}                                                    accent="yellow" delay={240}/>
         <StatCard icon="⚠️" label="Open Complaints" value={open}                                                       accent="red"    delay={300}/>
       </div>
 
-      {/* ── TAB BAR — original, unchanged ── */}
       <TabBar
         tabs={[['orders','📦 Orders',0],['vendors','👤 Vendors',0],['qr','📲 QR Codes',0],['complaints','⚠️ Complaints',open],['feedback','⭐ Feedback',0]]}
         active={tab} onChange={setTab}
       />
 
-      {/* ── ORDERS TAB — original, unchanged ── */}
       {tab==='orders' && (
         <Section title="Live Orders" count={orders.length}>
           <div className="tbl-wrap">
@@ -204,7 +202,6 @@ export default function AdminDashboard() {
         </Section>
       )}
 
-      {/* ── VENDORS TAB — original table + NEW "Add Vendor" button on top ── */}
       {tab==='vendors' && (
         <Section
           title="Vendor Overview"
@@ -244,7 +241,6 @@ export default function AdminDashboard() {
         </Section>
       )}
 
-      {/* ── QR TAB — original, unchanged ── */}
       {tab==='qr' && (
         <Section title="QR Code Management" count={qrCodes.length}
           action={<button className="btn-primary" style={{fontSize:'0.72rem',padding:'4px 12px'}} onClick={()=>setShowQR(true)}>+ New QR</button>}>
@@ -260,20 +256,30 @@ export default function AdminDashboard() {
                   <Badge label={qr.active?'Active':'Inactive'} status={qr.active?'active':'suspended'}/>
                 </div>
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'12px 0',gap:8}}>
-                  <div style={{padding:10,background:'#fff',borderRadius:8,border:`1px solid ${T.grayBorder}`,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'}}>
+                  <div data-qr-train={qr.trainNo} style={{padding:10,background:'#fff',borderRadius:8,border:`1px solid ${T.grayBorder}`,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'}}>
                     <RealQR url={`${window.location.origin}/app?train=${qr.trainNo}`} size={110} darkColor="#1d4ed8"/>
                     <p style={{textAlign:'center',fontSize:'0.58rem',color:T.textLight,marginTop:4,fontFamily:'monospace'}}>
                       /app?train={qr.trainNo}
                     </p>
                   </div>
-                  <button
-                    onClick={() => actions.toggleTrainMenuActive(qr.trainNo, !qr.active)}
-                    style={{fontSize:'0.65rem',fontWeight:700,padding:'3px 10px',borderRadius:5,cursor:'pointer',
-                      background: qr.active ? '#fef2f2' : '#f0fdf4',
-                      color:      qr.active ? '#dc2626' : '#16a34a',
-                      border:    `1px solid ${qr.active ? '#fecaca' : '#bbf7d0'}`}}>
-                    {qr.active ? '🔴 Disable Menu' : '🟢 Enable Menu'}
-                  </button>
+                  <div style={{display:'flex',gap:5}}>
+                    <button onClick={()=>setZoomQR(qr)}
+                      style={{fontSize:'0.65rem',fontWeight:700,padding:'3px 10px',borderRadius:5,cursor:'pointer',background:'#eff6ff',color:'#1d4ed8',border:'1px solid #bfdbfe'}}>
+                      🔍 Zoom
+                    </button>
+                    <button onClick={()=>downloadQR(qr.trainNo)}
+                      style={{fontSize:'0.65rem',fontWeight:700,padding:'3px 10px',borderRadius:5,cursor:'pointer',background:'#f0fdf4',color:'#16a34a',border:'1px solid #bbf7d0'}}>
+                      ⬇ Save
+                    </button>
+                    <button
+                      onClick={() => actions.toggleTrainMenuActive(qr.trainNo, !qr.active)}
+                      style={{fontSize:'0.65rem',fontWeight:700,padding:'3px 10px',borderRadius:5,cursor:'pointer',
+                        background: qr.active ? '#fef2f2' : '#f0fdf4',
+                        color:      qr.active ? '#dc2626' : '#16a34a',
+                        border:    `1px solid ${qr.active ? '#fecaca' : '#bbf7d0'}`}}>
+                      {qr.active ? '🔴 Disable' : '🟢 Enable'}
+                    </button>
+                  </div>
                 </div>
                 <p style={{textAlign:'center',fontSize:'0.65rem',color:T.textSub,padding:'0 8px 8px'}}>Scan to order food on Train {qr.trainNo}</p>
               </div>
@@ -282,7 +288,6 @@ export default function AdminDashboard() {
         </Section>
       )}
 
-      {/* ── COMPLAINTS TAB — original, unchanged ── */}
       {tab==='complaints' && (
         <Section title="Passenger Complaints" count={open}>
           <div style={{padding:'0.85rem 1rem',display:'flex',flexDirection:'column',gap:'0.65rem'}}>
@@ -308,7 +313,6 @@ export default function AdminDashboard() {
         </Section>
       )}
 
-      {/* ── FEEDBACK TAB — original, unchanged ── */}
       {tab==='feedback' && (
         <Section title="Passenger Feedback" count={feedback.length}>
           <div style={{padding:'0.85rem 1rem',display:'flex',flexDirection:'column',gap:'0.65rem'}}>
@@ -329,7 +333,7 @@ export default function AdminDashboard() {
         </Section>
       )}
 
-      {/* ── ORIGINAL QR MODAL — unchanged ── */}
+      {/* QR Generate Modal */}
       {showQR && (
         <div className="overlay" onClick={()=>setShowQR(false)}>
           <div className="drawer" style={{maxWidth:400}} onClick={e=>e.stopPropagation()}>
@@ -350,7 +354,8 @@ export default function AdminDashboard() {
               {newTrain && (
                 <div style={{display:'flex',justifyContent:'center',padding:'1rem',background:T.grayLight,borderRadius:12,border:`1px solid ${T.grayBorder}`}}>
                   <div style={{textAlign:'center'}}>
-                    <RealQR url={`${window.location.origin}/app?train=${newTrain}`} size={140} darkColor="#1d4ed8"/>                    <p style={{fontSize:'0.65rem',color:T.textSub,marginTop:6}}>irctc.pantry/{newTrain}</p>
+                    <RealQR url={`${window.location.origin}/app?train=${newTrain}`} size={140} darkColor="#1d4ed8"/>
+                    <p style={{fontSize:'0.65rem',color:T.textSub,marginTop:6}}>irctc.pantry/{newTrain}</p>
                   </div>
                 </div>
               )}
@@ -362,7 +367,30 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ══ NEW: ADD VENDOR MODAL ══════════════════════════════════════════════ */}
+      {/* Zoom QR Modal */}
+      {zoomQR && (
+        <div className="overlay" onClick={()=>setZoomQR(null)}>
+          <div className="drawer" style={{maxWidth:400}} onClick={e=>e.stopPropagation()}>
+            <div className="drawer-header">
+              <span className="section-title">📲 Train {zoomQR.trainNo} — {zoomQR.trainName}</span>
+              <button className="close-btn" onClick={()=>setZoomQR(null)}>✕</button>
+            </div>
+            <div style={{padding:'1.5rem',textAlign:'center'}}>
+              <div data-qr-train={`zoom-${zoomQR.trainNo}`} style={{padding:16,background:'#fff',borderRadius:12,border:`1px solid ${T.grayBorder}`,display:'inline-block',marginBottom:12}}>
+                <RealQR url={`${window.location.origin}/app?train=${zoomQR.trainNo}`} size={240} darkColor="#1d4ed8"/>
+              </div>
+              <p style={{fontSize:'0.75rem',fontWeight:700,color:T.textMid,marginBottom:4}}>{zoomQR.trainName}</p>
+              <p style={{fontSize:'0.62rem',color:T.textLight,fontFamily:'monospace',marginBottom:16}}>/app?train={zoomQR.trainNo}</p>
+              <button className="btn-primary" style={{width:'100%',padding:10}}
+                onClick={()=>downloadQR(`zoom-${zoomQR.trainNo}`)}>
+                ⬇ Download PNG
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Vendor Modal */}
       {showAddVendor && (
         <div className="overlay" onClick={resetAddForm}>
           <div className="drawer" style={{maxWidth:460}} onClick={e=>e.stopPropagation()}>
@@ -370,10 +398,7 @@ export default function AdminDashboard() {
               <span className="section-title">➕ Add New Vendor</span>
               <button className="close-btn" onClick={resetAddForm}>✕</button>
             </div>
-
             <div style={{padding:'1.1rem', display:'flex', flexDirection:'column', gap:'1rem', overflowY:'auto', maxHeight:'70vh'}}>
-
-              {/* Name + Phone */}
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
                 <div>
                   <label style={lbl}>👤 Vendor Name *</label>
@@ -390,8 +415,6 @@ export default function AdminDashboard() {
                   {vErrors.phone && <span style={errTxt}>{vErrors.phone}</span>}
                 </div>
               </div>
-
-              {/* Train No + Train Name side by side */}
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
                 <div>
                   <label style={lbl}>🚂 Train Number *</label>
@@ -407,12 +430,9 @@ export default function AdminDashboard() {
                     value={vForm.trainName} onChange={setV('trainName')} />
                 </div>
               </div>
-
-              {/* Info note */}
               <div style={{background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:8, padding:'10px 12px', fontSize:'0.7rem', color:'#1e40af'}}>
                 🔑 A <strong>Vendor ID</strong> and <strong>Password</strong> will be auto-generated. Show them to the vendor after saving.
               </div>
-
               <button className="btn-primary" onClick={handleAddVendor}
                 style={{width:'100%', padding:'12px', fontSize:'0.85rem'}}>
                 ✅ Create Vendor & Generate Credentials
@@ -422,7 +442,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ══ NEW: CREDENTIALS POPUP (shown after vendor is created) ════════════ */}
+      {/* Credentials Modal */}
       {showCreds && (
         <div className="overlay" onClick={()=>setShowCreds(null)}>
           <div className="drawer" style={{maxWidth:420}} onClick={e=>e.stopPropagation()}>
@@ -430,10 +450,7 @@ export default function AdminDashboard() {
               <span className="section-title">🔑 Vendor Credentials</span>
               <button className="close-btn" onClick={()=>setShowCreds(null)}>✕</button>
             </div>
-
             <div style={{padding:'1.1rem', display:'flex', flexDirection:'column', gap:'1rem'}}>
-
-              {/* Dark credential card */}
               <div style={{background:'linear-gradient(135deg,#0f172a,#1e293b)', borderRadius:14, padding:20}}>
                 <div style={{marginBottom:14}}>
                   <div style={{fontSize:'0.58rem', color:'rgba(255,255,255,0.45)', letterSpacing:'1px', marginBottom:3}}>VENDOR NAME</div>
@@ -451,19 +468,15 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* QR preview */}
-              <div style={{display:'flex', justifyContent:'center'}}>
+              <div style={{display:'flex',justifyContent:'center'}}>
                 <div style={{padding:12, background:'#f8fafc', borderRadius:12, border:'1px solid #e2e8f0', textAlign:'center'}}>
                   <MiniQR trainNo={showCreds.trainNo} size={110}/>
                   <div style={{fontSize:'0.6rem', color:'#94a3b8', marginTop:6, fontFamily:'monospace'}}>irctc.pantry/{showCreds.trainNo}</div>
                 </div>
               </div>
-
               <div style={{background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:8, padding:'10px 12px', fontSize:'0.7rem', color:'#9a3412'}}>
                 ⚠️ <strong>Save these now.</strong> The password cannot be retrieved later — only reset by admin.
               </div>
-
               <div style={{display:'flex', gap:8}}>
                 <button className="btn-primary" style={{flex:1, padding:'10px'}}
                   onClick={()=>{ navigator.clipboard?.writeText(`Vendor ID: ${showCreds.id}\nPassword: ${showCreds.password}\nTrain: ${showCreds.trainNo} - ${showCreds.trainName}`); toast('Copied!'); }}>
