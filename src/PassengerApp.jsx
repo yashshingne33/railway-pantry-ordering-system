@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useStore, actions, MENU, CATS, COACH_GROUPS, TRAIN_NAMES, T, genId, now, stars } from "./store";
 import { Badge, QtyCtrl } from "./store";
-
+import { useStore, actions, MENU, CATS, COACH_GROUPS, TRAIN_NAMES, T, genId, now, stars, useTrainMenu } from "./store";
 /* ══════════════════════════════════════════════════════════════
    PASSENGER APP — Train fixed from QR, no train selection
 ══════════════════════════════════════════════════════════════ */
@@ -13,6 +12,8 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
   const [orderInfo, setOrderInfo] = useState({});
   const [payMethod, setPayMethod] = useState('upi');
   const [setSessionOrderId] = useState(null);
+
+  const { menu: trainMenu } = useTrainMenu(prefillTrain);
 
   const addItem = item => setCart(c => ({...c,[item.id]:(c[item.id]||0)+1}));
   const remItem = item => setCart(c => {const n={...c};if(n[item.id]>1)n[item.id]--;else delete n[item.id];return n;});
@@ -61,7 +62,8 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
         {passengerTab==='order' && (
           <>
             {step===0 && <PCoachSeatSelect trainNo={prefillTrain} onNext={info=>{setUserInfo({...userInfo,...info});setStep(1);}}/>}
-            {step===1 && <PMenu    userInfo={userInfo} cart={cart} onAdd={addItem} onRem={remItem} onNext={()=>setStep(2)} onBack={()=>setStep(0)}/>}
+            {/* {step===1 && <PMenu    userInfo={userInfo} cart={cart} onAdd={addItem} onRem={remItem} onNext={()=>setStep(2)} onBack={()=>setStep(0)}/>} */}
+            {step===1 && <PMenu trainMenu={trainMenu} userInfo={userInfo} cart={cart} onAdd={addItem} onRem={remItem} onNext={()=>setStep(2)} onBack={()=>setStep(0)}/>}
             {step===2 && <PCart    cart={cart} onAdd={addItem} onRem={remItem} onBack={()=>setStep(1)} onNext={(t,e)=>{setOrderInfo({total:t,eta:e});setStep(3);}}/>}
             {step===3 && <PPay     total={orderInfo.total} eta={orderInfo.eta} onBack={()=>setStep(2)} onNext={m=>{setPayMethod(m);setStep(4);}}/>}
             {step===4 && <PTrack   userInfo={userInfo} orderInfo={orderInfo} payMethod={payMethod} cart={cart}
@@ -230,15 +232,22 @@ function PCoachSeatSelect({ trainNo, onNext }) {
 /* ══════════════════════════════════════════════════════════════
    MENU
 ══════════════════════════════════════════════════════════════ */
-function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack }) {
+function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack, trainMenu }) {
   const [cat, setCat]         = useState('All');
   const [vegOnly, setVegOnly] = useState(false);
   const [search, setSearch]   = useState('');
 
+  // Use vendor's live menu if published, else fall back to static MENU
+  const liveItems  = trainMenu?.items?.filter(i => i.available !== false) ?? null;
+  const menuSource = liveItems ?? MENU;
+  const catsSource = liveItems
+    ? ['All', ...Array.from(new Set(liveItems.map(m => m.cat).filter(Boolean)))]
+    : CATS;
+
   const cartCount = Object.values(cart).reduce((a,b)=>a+b,0);
-  const cartTotal = Object.entries(cart).reduce((s,[id,q])=>s+(MENU.find(m=>m.id===+id)?.price||0)*q,0);
-  const filtered  = MENU.filter(m=>(cat==='All'||m.cat===cat)&&(!vegOnly||m.veg)&&(!search||m.name.toLowerCase().includes(search.toLowerCase())));
-  const popular   = MENU.filter(m=>m.popular);
+  const cartTotal = Object.entries(cart).reduce((s,[id,q])=>s+(menuSource.find(m=>m.id===+id||m.id===String(id))?.price||0)*q,0);
+  const filtered  = menuSource.filter(m=>(cat==='All'||m.cat===cat)&&(!vegOnly||m.veg)&&(!search||m.name.toLowerCase().includes(search.toLowerCase())));
+  const popular   = menuSource.filter(m=>m.popular);
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
@@ -255,8 +264,7 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack }) {
           </div>
         </div>
         <div style={{display:'flex',alignItems:'center',padding:'7px 14px',gap:5,overflowX:'auto'}}>
-          {CATS.map(c => (
-            <button key={c} onClick={()=>setCat(c)}
+            {catsSource.map(c => (            <button key={c} onClick={()=>setCat(c)}
               style={{padding:'4px 10px',borderRadius:99,border:'none',cursor:'pointer',fontSize:'0.68rem',fontWeight:700,whiteSpace:'nowrap',background:cat===c?T.orange:'#f3f4f6',color:cat===c?'#fff':'#6b7280'}}>
               {c}
             </button>
@@ -275,8 +283,9 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack }) {
             <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:6}}>
               {popular.map(item => (
                 <div key={item.id} style={{flexShrink:0,width:112,background:'#fff',borderRadius:12,border:'1px solid #f3f4f6',overflow:'hidden',boxShadow:'0 2px 6px rgba(0,0,0,.05)'}}>
-                  <div style={{height:54,background:'linear-gradient(135deg,#fff7ed,#fef3c7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem'}}>{item.emoji}</div>
-                  <div style={{padding:'6px 8px 8px'}}>
+                  <div style={{height:54,background:'linear-gradient(135deg,#fff7ed,#fef3c7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',overflow:'hidden'}}>
+                    {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}} alt={item.name}/> : (item.emoji||'🍽️')}
+                  </div>                  <div style={{padding:'6px 8px 8px'}}>
                     <p style={{fontSize:'0.66rem',fontWeight:800,color:T.text,marginBottom:3}}>{item.name}</p>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                       <span style={{fontWeight:900,color:T.orange,fontSize:'0.78rem'}}>₹{item.price}</span>
@@ -293,8 +302,9 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack }) {
           <div style={{display:'flex',flexDirection:'column',gap:7}}>
             {filtered.map((item,i) => (
               <div key={item.id} style={{background:'#fff',borderRadius:10,border:'1px solid #f3f4f6',padding:9,display:'flex',gap:9,alignItems:'flex-start',boxShadow:'0 1px 3px rgba(0,0,0,.04)',animation:'fadeUp .22s ease both',animationDelay:`${i*20}ms`}}>
-                <div style={{width:54,height:54,borderRadius:9,flexShrink:0,background:'linear-gradient(135deg,#fff7ed,#fef9c3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem'}}>{item.emoji}</div>
-                <div style={{flex:1,minWidth:0}}>
+                <div style={{width:54,height:54,borderRadius:9,flexShrink:0,background:'linear-gradient(135deg,#fff7ed,#fef9c3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',overflow:'hidden'}}>
+                  {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}} alt={item.name}/> : (item.emoji||'🍽️')}
+                </div>                <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:2}}>
                     <span style={{fontSize:'0.81rem',fontWeight:800,color:T.text}}>{item.name}</span>
                     {item.popular && <span style={{fontSize:'0.52rem',fontWeight:800,padding:'1px 5px',background:'#fef3c7',color:'#d97706',borderRadius:4}}>HOT</span>}

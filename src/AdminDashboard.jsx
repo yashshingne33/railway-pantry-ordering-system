@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useStore, actions, T, genId, now } from "./store";
 import { Badge, Chip, StatCard, TabBar, Section, QRCode } from "./store";
+import RealQR from './RealQR';
+
 
 /* ── Helpers for vendor credentials (localStorage, no backend needed) ─────── */
 const genVendorId = () => "V" + String(Math.floor(1000 + Math.random() * 9000));
@@ -82,8 +84,8 @@ export default function AdminDashboard() {
   // ── Add vendor logic ────────────────────────────────────────────────────────
   const setV = (k) => (e) => { setVForm(f => ({...f, [k]: e.target.value})); setVErrors(er => ({...er, [k]:''})); };
 
-  const handleAddVendor = () => {
-    const e = {};
+  const handleAddVendor = async () => {
+      const e = {};
     if (!vForm.name.trim())     e.name    = "Required";
     if (!vForm.phone.trim())    e.phone   = "Required";
     if (!vForm.trainNo.trim())  e.trainNo = "Required";
@@ -110,6 +112,9 @@ export default function AdminDashboard() {
 
     // push into store so vendor table updates immediately
     actions.addVendor?.(newVendor);
+
+    await actions.initTrainMenu(newVendor.trainNo, newVendor.trainName, newVendor.id, newVendor.name);
+
 
     // ── AUTO-GENERATE QR for this vendor's train ──────────────────────────
     actions.addQR?.({
@@ -254,11 +259,21 @@ export default function AdminDashboard() {
                   </div>
                   <Badge label={qr.active?'Active':'Inactive'} status={qr.active?'active':'suspended'}/>
                 </div>
-                <div style={{display:'flex',justifyContent:'center',padding:'12px 0'}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'12px 0',gap:8}}>
                   <div style={{padding:10,background:'#fff',borderRadius:8,border:`1px solid ${T.grayBorder}`,boxShadow:'0 2px 8px rgba(0,0,0,0.08)'}}>
-                    <QRCode trainNo={qr.trainNo} size={110}/>
-                    <p style={{textAlign:'center',fontSize:'0.58rem',color:T.textLight,marginTop:4,fontFamily:'monospace'}}>irctc.pantry/{qr.trainNo}</p>
+                    <RealQR url={`${window.location.origin}/app?train=${qr.trainNo}`} size={110} darkColor="#1d4ed8"/>
+                    <p style={{textAlign:'center',fontSize:'0.58rem',color:T.textLight,marginTop:4,fontFamily:'monospace'}}>
+                      /app?train={qr.trainNo}
+                    </p>
                   </div>
+                  <button
+                    onClick={() => actions.toggleTrainMenuActive(qr.trainNo, !qr.active)}
+                    style={{fontSize:'0.65rem',fontWeight:700,padding:'3px 10px',borderRadius:5,cursor:'pointer',
+                      background: qr.active ? '#fef2f2' : '#f0fdf4',
+                      color:      qr.active ? '#dc2626' : '#16a34a',
+                      border:    `1px solid ${qr.active ? '#fecaca' : '#bbf7d0'}`}}>
+                    {qr.active ? '🔴 Disable Menu' : '🟢 Enable Menu'}
+                  </button>
                 </div>
                 <p style={{textAlign:'center',fontSize:'0.65rem',color:T.textSub,padding:'0 8px 8px'}}>Scan to order food on Train {qr.trainNo}</p>
               </div>
@@ -335,8 +350,7 @@ export default function AdminDashboard() {
               {newTrain && (
                 <div style={{display:'flex',justifyContent:'center',padding:'1rem',background:T.grayLight,borderRadius:12,border:`1px solid ${T.grayBorder}`}}>
                   <div style={{textAlign:'center'}}>
-                    <QRCode trainNo={newTrain} size={140}/>
-                    <p style={{fontSize:'0.65rem',color:T.textSub,marginTop:6}}>irctc.pantry/{newTrain}</p>
+                    <RealQR url={`${window.location.origin}/app?train=${newTrain}`} size={140} darkColor="#1d4ed8"/>                    <p style={{fontSize:'0.65rem',color:T.textSub,marginTop:6}}>irctc.pantry/{newTrain}</p>
                   </div>
                 </div>
               )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useStore, actions } from "./store";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "./store";
+import VendorMenuEditor from './VendorMenuEditor';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const TRAINS_ASSIGNED = [
@@ -103,7 +104,8 @@ function useNewRatingCount(feedback, myTrains) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function VendorPanel() {
+// export default function VendorPanel() {
+export default function VendorPanel({ vendor }) {
   const orders     = useStore(s => s.orders);
   const complaints = useStore(s => s.complaints) || [];
   const feedback   = useStore(s => s.feedback)   || [];   // ← live from Firebase
@@ -246,6 +248,7 @@ export default function VendorPanel() {
     ["done",        "✅ Done",       0],
     ["complaints",  "⚠️ Complaints", openCnt + inProgCnt],
     ["ratings",     "⭐ Ratings",    newRatingCount],   // ← NEW
+    ["menu", "📋 Menu", 0],
   ];
 
   return (
@@ -529,6 +532,10 @@ export default function VendorPanel() {
             </div>
           ))}
         </div>
+      )}
+
+      {tab === "menu" && (
+        <VendorMenuEditor vendor={vendor} />
       )}
 
       {/* ── ORDER GRID ────────────────────────────────────────────────────── */}

@@ -20,6 +20,7 @@
  */
 
 import { useState } from "react";
+import RealQR from './RealQR';
 
 /* ── Session helpers ──────────────────────────────────────────────────────── */
 const SESSION_KEY = "irctc_vendor_session";
@@ -256,6 +257,7 @@ function LoginForm({ onSuccess }) {
 ══════════════════════════════════════════════════════════════════════════ */
 function VendorHeader({ vendor, onLogout }) {
   const [showQR, setShowQR] = useState(false);
+  
 
   return (
     <>
@@ -340,8 +342,11 @@ function VendorHeader({ vendor, onLogout }) {
               boxShadow:"0 4px 20px rgba(0,0,0,0.08)",
               marginBottom:14,
             }}>
-              <MiniQR trainNo={vendor.trainNo || vendor.train} size={160} />
-            </div>
+            <RealQR
+              url={`${window.location.origin}/app?train=${vendor.trainNo || vendor.train}`}
+              size={160}
+              darkColor="#1e3a5f"
+            />            </div>
 
             <div style={{ fontSize:"0.7rem", color:"#64748b", marginBottom:6 }}>
               Passengers scan this to order food
@@ -353,7 +358,7 @@ function VendorHeader({ vendor, onLogout }) {
               border:"1px solid #dbeafe", display:"inline-block",
               marginBottom:20,
             }}>
-              irctc.pantry/{vendor.trainNo || vendor.train}
+{window.location.origin}/app?train={vendor.trainNo || vendor.train}
             </div>
 
             <div style={{ display:"flex", gap:8 }}>

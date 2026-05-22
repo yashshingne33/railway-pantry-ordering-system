@@ -33,7 +33,7 @@
 
 
 
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import PantrySystem from './PantrySystem';
 import AdminDashboard from './AdminDashboard';
 import VendorPanel from './VendorPanel';
@@ -41,11 +41,20 @@ import PassengerApp from './PassengerApp';
 import VendorLogin from './VendorLogin';
 import AdminLogin from './AdminLogin';
 
+
+function PassengerRoute() {
+  const [searchParams] = useSearchParams();
+  const train = searchParams.get('train') || '12139';
+  return <PassengerApp prefillTrain={train} />;
+}
+
+
 export default function App() {
   return (
     <Routes>
       <Route element={<PantrySystem />}>
-        <Route path="/app"        element={<PassengerApp prefillTrain="12139" />} />
+        {/* <Route path="/app"        element={<PassengerApp prefillTrain="12139" />} /> */}
+        <Route path="/app" element={<PassengerRoute />} />
         <Route path="/app/admin" element={
           <AdminLogin>
             {(admin, logout) => <AdminDashboard admin={admin} onLogout={logout} />}

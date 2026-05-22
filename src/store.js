@@ -83,6 +83,20 @@ export function useFirestore(colName) {
   return { docs, loading };
 }
 
+export function useTrainMenu(trainNo) {
+  const [menu,    setMenu]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!trainNo) return;
+    const unsub = onSnapshot(doc(db, 'trainMenus', trainNo), snap => {
+      setMenu(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+      setLoading(false);
+    });
+    return unsub;
+  }, [trainNo]);
+  return { menu, loading };
+}
+
 /* ══════════════════════════════════════════════════════════════
    LEGACY useStore COMPATIBILITY
    Components using useStore(s => s.orders) etc. still work.
@@ -201,6 +215,18 @@ export const actions = {
     await updateDoc(doc(db, 'agents', id), {
       status: agent.status === 'Active' ? 'Inactive' : 'Active'
     });
+  },
+
+  /* Train Menus */
+  initTrainMenu: async (trainNo, trainName, vendorId, vendorName) => {
+    await setDoc(doc(db, 'trainMenus', trainNo), {
+      trainNo, trainName, vendorId, vendorName,
+      active: true, items: [],
+      _createdAt: serverTimestamp(),
+    }, { merge: true });
+  },
+  toggleTrainMenuActive: async (trainNo, active) => {
+    await updateDoc(doc(db, 'trainMenus', trainNo), { active });
   },
 };
 
