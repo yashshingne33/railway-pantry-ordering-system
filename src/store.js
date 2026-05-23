@@ -203,6 +203,10 @@ export const actions = {
     await updateDoc(doc(db, 'vendors', id), patch);
   },
 
+  deleteVendor: async (id) => {
+    await deleteDoc(doc(db, 'vendors', id));
+  },
+
   /* Agents */
   addAgent: async (agent) => {
     const { id, ...rest } = agent;
@@ -228,6 +232,22 @@ export const actions = {
   toggleTrainMenuActive: async (trainNo, active) => {
     await updateDoc(doc(db, 'trainMenus', trainNo), { active });
   },
+  // In your store actions, add:
+updateQR: async (id, updates) => {
+  try {
+    await updateDoc(doc(db, "qrCodes", id), updates);
+  } catch (e) {
+    console.error("updateQR failed", e);
+  }
+},
+
+deleteQR: async (id) => {
+  try {
+    await deleteDoc(doc(db, "qrCodes", id));
+  } catch (e) {
+    console.error("deleteQR failed", e);
+  }
+},
 };
 
 /* ══════════════════════════════════════════════════════════════

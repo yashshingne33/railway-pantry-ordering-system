@@ -559,7 +559,7 @@ function PCart({ cart, onAdd, onRem, onBack, onNext }) {
 
         {/* Bill summary */}
         <div className="ir-card" style={{padding:12,marginTop:4}}>
-          {[['Item Total',`₹${total}`],['Delivery','FREE ✓'],['IRCTC Catering Fee','Included']].map(([k,v])=>(
+          {[['Item Total',`₹${total}`],['Delivery','FREE ✓'],['Indian Railway Catering Fee','Included']].map(([k,v])=>(
             <div key={k} style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:'0.73rem',color:IR.textSub}}>
               <span>{k}</span>
               <span style={{fontWeight:700,color:v==='FREE ✓'?IR.green:IR.textMid}}>{v}</span>
@@ -677,7 +677,7 @@ const PTRACK = [
 
 function PTrack({ userInfo, orderInfo, payMethod, cart, onSetOrderId, onFeedback, onComplaint, onReset }) {
   const [cur, setCur]     = useState(0);
-  const [orderId]         = useState(() => genId('IRCTC'));
+  const [orderId]         = useState(() => genId('Indian Railway'));
   const [orderReady, setOrderReady] = useState(false);
   const done = cur === PTRACK.length - 1;
 
@@ -817,7 +817,12 @@ function PTrack({ userInfo, orderInfo, payMethod, cart, onSetOrderId, onFeedback
    FEEDBACK
 ═══════════════════════════════════════════════════════════ */
 function PFeedback({ userInfo }) {
-  const allFeedback = useStore(s => s.feedback);
+const allFeedbackRaw = useStore(s => s.feedback);
+// Show only feedback from this passenger's seat on this train
+const allFeedback = allFeedbackRaw.filter(f =>
+  f.trainNo === userInfo?.train &&
+  f.seat === (userInfo?.seat ? `${userInfo.coach}-${userInfo.seat}` : f.seat)
+);
   const [mode, setMode]           = useState('list');
   const [rating, setRating]       = useState(0);
   const [hover, setHover]         = useState(0);
@@ -976,7 +981,11 @@ function PFeedback({ userInfo }) {
    COMPLAINT
 ═══════════════════════════════════════════════════════════ */
 function PComplaint({ userInfo }) {
-  const allComplaints = useStore(s => s.complaints);
+const allComplaintsRaw = useStore(s => s.complaints);
+const allComplaints = allComplaintsRaw.filter(c =>
+  c.trainNo === userInfo?.train &&
+  c.seat === (userInfo?.seat ? `${userInfo.coach}-${userInfo.seat}` : c.seat)
+);
   const [mode, setMode]           = useState('list');
   const [issue, setIssue]         = useState('');
   const [custom, setCustom]       = useState('');
@@ -1165,7 +1174,7 @@ function PHelpPage({ onContact }) {
     { q:'Is cash on delivery available?', a:'Yes! Select "Cash on Delivery" at checkout. Keep the exact amount ready for the delivery agent.' },
     { q:'What if my food is cold or wrong?', a:'Tap the Complaint tab and file a complaint with details. Our team responds within 2 hours.' },
     { q:'How do I rate my experience?', a:'After delivery, tap the ⭐ Rate tab and submit your rating and comments.' },
-    { q:'Are the prices IRCTC-approved?', a:'Yes, all prices displayed are official IRCTC-approved rates. Any overcharging should be reported immediately.' },
+    { q:'Are the prices Indian Railway-approved?', a:'Yes, all prices displayed are official Indian Railway-approved rates. Any overcharging should be reported immediately.' },
   ];
 
   return (

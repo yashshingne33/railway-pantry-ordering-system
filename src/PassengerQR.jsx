@@ -43,15 +43,15 @@
 // };
 
 // const getSaved = () => {
-//   try { return JSON.parse(localStorage.getItem("irctc_passenger") || "null"); } catch { return null; }
+//   try { return JSON.parse(localStorage.getItem("Indian Railway_passenger") || "null"); } catch { return null; }
 // };
 
 // const saveData = (d) => {
-//   try { localStorage.setItem("irctc_passenger", JSON.stringify(d)); } catch {}
+//   try { localStorage.setItem("Indian Railway_passenger", JSON.stringify(d)); } catch {}
 // };
 
 // const randomETA = () => ["~12 min","~18 min","~8 min","~22 min","~14 min"][Math.floor(Math.random()*5)];
-// const genOrderId = () => "IRCTC-" + Math.floor(10000 + Math.random()*90000);
+// const genOrderId = () => "Indian Railway-" + Math.floor(10000 + Math.random()*90000);
 
 // /* ─── Shared style atoms ──────────────────────────────────────────────────── */
 // const fld    = { marginBottom:14 };
@@ -155,7 +155,7 @@
 //       <div style={{ background:"linear-gradient(135deg,#c2410c 0%,#e65c00 60%,#f9a825 100%)", padding:"22px 20px 30px", position:"relative", overflow:"hidden" }}>
 //         <div style={{ position:"absolute", right:-30, top:-30, width:120, height:120, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
 //         <div style={{ position:"absolute", right:30, bottom:-40, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
-//         <div style={{ fontSize:"0.65rem", fontWeight:800, color:"rgba(255,255,255,0.75)", letterSpacing:"2px", fontFamily:"Nunito, sans-serif", marginBottom:6 }}>IRCTC PANTRY SYSTEM</div>
+//         <div style={{ fontSize:"0.65rem", fontWeight:800, color:"rgba(255,255,255,0.75)", letterSpacing:"2px", fontFamily:"Nunito, sans-serif", marginBottom:6 }}>Indian Railway PANTRY SYSTEM</div>
 //         {/* <div style={{ fontSize:"1.55rem", fontWeight:900, color:"#fff", fontFamily:"Poppins, sans-serif", lineHeight:1.25 }}>Hot Food,<br/>Right to Your Seat 🍽️</div> */}
 //         {/* <div style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.85)", marginTop:8, fontFamily:"Nunito, sans-serif" }}>Order in 30 seconds · Delivered before next stop</div> */}
 //         {/* <div style={{ display:"flex", gap:8, marginTop:14 }}>
@@ -218,7 +218,7 @@
 //         <div style={{ background:"#f9fafb", borderRadius:12, padding:"14px", marginTop:4, border:"1px solid #f3f4f6" }}>
 //           <div style={{ fontSize:"0.7rem", fontWeight:800, color:"#374151", fontFamily:"Poppins, sans-serif", marginBottom:10 }}>WHY ORDER WITH US?</div>
 //           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-//             {[["🚀","Fast Delivery","Hot food at your seat"],["💯","IRCTC Certified","Verified vendors only"],["📱","Easy Payment","UPI & Cash accepted"],["🌿","Veg & Non-Veg","Wide menu choice"]].map(([icon, title, sub]) => (
+//             {[["🚀","Fast Delivery","Hot food at your seat"],["💯","Indian Railway Certified","Verified vendors only"],["📱","Easy Payment","UPI & Cash accepted"],["🌿","Veg & Non-Veg","Wide menu choice"]].map(([icon, title, sub]) => (
 //               <div key={title} style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
 //                 <span style={{ fontSize:"1rem" }}>{icon}</span>
 //                 <div>
@@ -406,7 +406,7 @@
 //           {/* Bill summary */}
 //           <div style={{ background:"#f9fafb", borderRadius:12, padding:"14px", marginTop:14, border:"1px solid #f3f4f6" }}>
 //             <div style={{ fontSize:"0.68rem", fontWeight:800, color:"#374151", fontFamily:"Poppins, sans-serif", marginBottom:10, letterSpacing:"0.5px" }}>BILL SUMMARY</div>
-//             {[["Item Total",`₹${total}`],["Delivery Charge","FREE ✓"],["IRCTC Service Fee","Included"]].map(([k,v]) => (
+//             {[["Item Total",`₹${total}`],["Delivery Charge","FREE ✓"],["Indian Railway Service Fee","Included"]].map(([k,v]) => (
 //               <div key={k} style={{ display:"flex", justifyContent:"space-between", marginBottom:7, fontSize:"0.78rem", color:"#6b7280", fontFamily:"Nunito, sans-serif" }}>
 //                 <span>{k}</span>
 //                 <span style={{ fontWeight:700, color: v==="FREE ✓"?"#16a34a":"#374151" }}>{v}</span>
@@ -420,7 +420,7 @@
 
 //           <div style={{ display:"flex", gap:8, alignItems:"flex-start", marginTop:12, padding:"10px 12px", background:"#eff6ff", borderRadius:10, border:"1px solid #dbeafe" }}>
 //             <span>ℹ️</span>
-//             <span style={{ fontSize:"0.67rem", color:"#1e40af", fontFamily:"Nunito, sans-serif" }}>All food is freshly prepared by IRCTC certified vendors. Hygiene rating: ⭐⭐⭐⭐⭐</span>
+//             <span style={{ fontSize:"0.67rem", color:"#1e40af", fontFamily:"Nunito, sans-serif" }}>All food is freshly prepared by Indian Railway certified vendors. Hygiene rating: ⭐⭐⭐⭐⭐</span>
 //           </div>
 //           <div style={{ height:16 }} />
 //         </div>
@@ -485,7 +485,7 @@
 //                   <rect x="17" y="99" width="14" height="14" rx="1" fill="#e65c00"/>
 //                   {[48,54,60,66,72,78].flatMap(x=>[48,54,60,66,72,78].map(y=>((x+y)%12<7)?<rect key={`${x}-${y}`} x={x} y={y} width="5" height="5" fill="#e65c00"/>:null))}
 //                 </svg>
-//                 <div style={{ fontSize:"0.62rem", color:"#9ca3af", textAlign:"center", marginTop:5, fontFamily:"Nunito, sans-serif" }}>IRCTC@upi · ₹{total}</div>
+//                 <div style={{ fontSize:"0.62rem", color:"#9ca3af", textAlign:"center", marginTop:5, fontFamily:"Nunito, sans-serif" }}>Indian Railway@upi · ₹{total}</div>
 //               </div>
 //             </div>
 //             <div style={{ fontSize:"0.68rem", color:"#9ca3af", textAlign:"center", marginBottom:8, fontFamily:"Nunito, sans-serif" }}>— or enter UPI ID manually —</div>
@@ -604,7 +604,7 @@
 //           <div style={{ background:"linear-gradient(135deg,#fff7ed,#fef9c3)", borderRadius:14, padding:"22px 20px", textAlign:"center", marginTop:14, border:"1px solid #fed7aa", animation:"bounceIn 0.5s ease" }}>
 //             <div style={{ fontSize:"3rem", marginBottom:6 }}>🎉</div>
 //             <div style={{ fontWeight:900, color:"#c2410c", fontSize:"1.15rem", fontFamily:"Poppins, sans-serif" }}>Order Delivered!</div>
-//             <div style={{ fontSize:"0.72rem", color:"#9a3412", marginTop:4, fontFamily:"Nunito, sans-serif" }}>Thank you for ordering with IRCTC Pantry</div>
+//             <div style={{ fontSize:"0.72rem", color:"#9a3412", marginTop:4, fontFamily:"Nunito, sans-serif" }}>Thank you for ordering with Indian Railway Pantry</div>
 //             {payMethod==="cod" && (
 //               <div style={{ marginTop:10, padding:"9px 14px", background:"#fff", borderRadius:8, border:"1px solid #fed7aa", fontSize:"0.72rem", color:"#9a3412", fontFamily:"Nunito, sans-serif", fontWeight:700 }}>
 //                 💵 Please pay ₹{orderInfo.total} to the vendor
@@ -616,9 +616,9 @@
 //           </div>
 //         )}
 
-//         {/* Why IRCTC Pantry */}
+//         {/* Why Indian Railway Pantry */}
 //         <div style={{ marginTop:16 }}>
-//           <div style={{ fontSize:"0.7rem", fontWeight:800, color:"#374151", marginBottom:10, letterSpacing:"0.5px", fontFamily:"Nunito, sans-serif" }}>WHY IRCTC PANTRY?</div>
+//           <div style={{ fontSize:"0.7rem", fontWeight:800, color:"#374151", marginBottom:10, letterSpacing:"0.5px", fontFamily:"Nunito, sans-serif" }}>WHY Indian Railway PANTRY?</div>
 //           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
 //             {SMART_FEATURES.map(f=>(
 //               <div key={f.title} style={{ background:"#fff", borderRadius:12, padding:"10px 10px", border:"1px solid #f3f4f6", boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
