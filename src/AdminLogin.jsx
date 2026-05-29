@@ -153,17 +153,9 @@ function LoginForm({ onSuccess }) {
 
         {/* Header badge */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: 22,
-            background: "rgba(255,255,255,0.1)",
-            border: "1.5px solid rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px",
-            boxShadow: "0 0 0 10px rgba(30,90,230,0.06), 0 16px 40px rgba(0,0,0,0.3)",
-            color: "#93c5fd",
-          }}>
-            <ShieldIcon />
-          </div>
+<div style={{ width: 80, height: 80, borderRadius: 22, background: "#fff", padding: 8, margin: "0 auto 16px", boxShadow: "0 0 0 10px rgba(30,90,230,0.06), 0 16px 40px rgba(0,0,0,0.3)", boxSizing: "border-box" }}>
+  <img src="/logo.png" alt="Railway Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+</div>
           <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
             Admin Portal
           </div>

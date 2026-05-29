@@ -174,11 +174,7 @@ const Icons = {
       <circle cx="15.5" cy="14.5" r="0.5" fill="currentColor"/>
     </svg>
   ),
-  Revenue: () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-    </svg>
-  ),
+Revenue: () => <span style={{ fontSize: 20, fontWeight: 700, color: "currentColor", lineHeight: 1 }}>₹</span>,
   Package: () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>

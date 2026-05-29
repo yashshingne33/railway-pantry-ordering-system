@@ -156,17 +156,9 @@ function LoginForm({ onSuccess }) {
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 30 }}>
-          <div style={{
-            width: 76, height: 76, borderRadius: 20,
-            background: "rgba(255,255,255,0.1)",
-            border: "1.5px solid rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px",
-            boxShadow: "0 8px 28px rgba(0,0,0,0.22)",
-            color: "#93c5fd",
-          }}>
-            <TrainIcon />
-          </div>
+<div style={{ width: 76, height: 76, borderRadius: 20, background: "#fff", padding: 8, margin: "0 auto 16px", boxShadow: "0 8px 28px rgba(0,0,0,0.22)", boxSizing: "border-box" }}>
+  <img src="/logo.png" alt="Railway Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+</div>
           <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
             Vendor Portal
           </div>
