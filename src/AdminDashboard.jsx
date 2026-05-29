@@ -574,14 +574,6 @@ const vendorOrders = (tNo, vId) => orders.filter(o =>
 const doUpdateQR = (id, updates) => actions.updateQR(id, updates);
 const doDeleteQR = id => actions.deleteQR(id);
 
-  // const doDeleteVendor = id => {
-  //   if (typeof actions.deleteVendor === "function") {
-  //     actions.deleteVendor(id);
-  //   } else {
-  //     setState(s => ({ vendors: s.vendors.filter(v => v.id!==id) }));
-  //   }
-  // };
-
   const doDeleteVendor = id => {
     actions.deleteVendor(id);
   };

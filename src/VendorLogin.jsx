@@ -4,10 +4,11 @@
  * Blue theme, professional, fully responsive
  */
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { db } from "./store";
 import RealQR from './RealQR';
+import QRCodeLib from 'qrcode';
 
 const SESSION_KEY = "ir_vendor_session";
 
@@ -281,28 +282,30 @@ function LoginForm({ onSuccess }) {
 ══════════════════════════════════════════════════════════════════════════ */
 function VendorHeader({ vendor, onLogout }) {
   const [showQR, setShowQR] = useState(false);
+  const canvasRef = React.useRef(null);
 
-  const downloadQR = () => {
-    const wrapper = document.querySelector('[data-qr-vendor-header]');
-    if (!wrapper) return;
-    const svg = wrapper.querySelector('svg');
-    if (!svg) return;
-    const svgData = new XMLSerializer().serializeToString(svg);
+  const downloadQR = async () => {
+    const url = `${window.location.origin}/app?train=${vendor.trainNo || vendor.train}`;
     const canvas = document.createElement('canvas');
-    canvas.width = 300; canvas.height = 300;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.onload = () => {
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, 300, 300);
-      ctx.drawImage(img, 0, 0, 300, 300);
-      const a = document.createElement('a');
-      a.download = `QR-Train-${vendor.trainNo || vendor.train}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    canvas.width  = 400;
+    canvas.height = 400;
+    await QRCodeLib.toCanvas(canvas, url, {
+      width:  400,
+      margin: 2,
+      color: {
+        dark:  '#0a1628',
+        light: '#ffffff',
+      },
+    });
+    const a = document.createElement('a');
+    a.download = `QR-Train-${vendor.trainNo || vendor.train}.png`;
+    a.href     = canvas.toDataURL('image/png');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
+
+  // ... rest of component unchanged
 
   return (
     <>

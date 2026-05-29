@@ -181,8 +181,19 @@ const GLOBAL_CSS = `
   ::-webkit-scrollbar-thumb { background:#dde3f0; border-radius:3px; }
 
   /* Footer bar */
-  .ir-footer-bar { padding:10px 14px 16px; background:#fff; border-top:1px solid #eef1f8; flex-shrink:0; }
-  .ir-footer-bar.safe-bottom { padding-bottom:max(16px,env(safe-area-inset-bottom)); }
+  .ir-footer-bar {
+    padding: 10px 14px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid #eef1f8;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+  .ir-footer-bar.safe-bottom {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
 
   /* Feedback review card */
   .ir-review-card { background:#fff; border-radius:12px; border:1px solid #eef1f8; padding:13px; margin-bottom:9px; box-shadow:0 1px 4px rgba(26,42,108,.04); }
@@ -217,10 +228,26 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
   const resetOrder = () => { setStep(0); setCart({}); setSessionOrderId(null); };
 
   const passengerTabs = [
-    { id:'order',     icon:'◈', label:'Order' },
-    { id:'feedback',  icon:'◆',  label:'Rate' },
-    { id:'complaint', icon:'▲', label:'Complaint' },
-    { id:'help',      icon:'?', label:'Help' },
+    {
+      id:'order',
+      icon:<span style={{ color:'#10b981' }}>◈</span>,
+      label:'Order'
+    },
+    { 
+      id:'feedback',
+      icon:<span style={{ color:'#e0b84f' }}>★</span>,
+      label:'Rate'
+    },
+    { 
+      id:'complaint',
+      icon:<span style={{ color:'#f59e0b' }}>⚠</span>,
+      label:'Complaint'
+    },
+    {
+      id:'help',
+      icon:<span style={{ color:'#3b82f6', fontWeight:'bold' }}>?</span>,
+      label:'Help'
+    },
   ];
 
   return (
@@ -306,13 +333,22 @@ function PCoachSeatSelect({ trainNo, onNext }) {
             </div>
           </div>
           <div style={{width:38,height:38,borderRadius:'50%',background:'rgba(255,255,255,.12)',border:`2px solid ${IR.gold}60`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-            <span style={{fontFamily:'Rajdhani,sans-serif',fontSize:'0.58rem',fontWeight:700,color:IR.gold,textAlign:'center',lineHeight:1.2}}>भारत<br/>रेल</span>
+            {/* <span style={{fontFamily:'Rajdhani,sans-serif',fontSize:'0.58rem',fontWeight:700,color:IR.gold,textAlign:'center',lineHeight:1.2}}>भारत<br/>रेल</span> */}
+            <img
+              src="/logo.png"
+              alt="Railway Logo"
+              style={{
+                width:'26px',
+                height:'26px',
+                objectFit:'contain'
+              }}
+            />
           </div>
         </div>
       </div>
       <div className="ir-gold-line"/>
 
-      <div style={{flex:1,overflowY:'auto',padding:'14px 14px 0'}}>
+      <div style={{flex:1,overflowY:'auto',padding:'14px 14px 90px',WebkitOverflowScrolling:'touch'}}>
 
         {/* Train Number (readonly) */}
         <div style={{marginBottom:13}}>
@@ -348,7 +384,7 @@ function PCoachSeatSelect({ trainNo, onNext }) {
         <div style={{marginBottom:12}}>
           <div className="ir-section-label">Passenger Name <span style={{color:IR.red,fontSize:'0.75rem',fontWeight:900,marginLeft:2}}>*</span></div>
           <input value={name} onChange={e=>{setName(e.target.value);setErrors(p=>({...p,name:false}))}}
-            placeholder="e.g. Rahul Sharma" className={`ir-input${errors.name?' error':''}`}/>
+            placeholder="e.g. Yash Shingne" className={`ir-input${errors.name?' error':''}`}/>
           {errors.name && <div className="ir-err">Please enter your name</div>}
         </div>
 
@@ -506,11 +542,11 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack, trainMenu }) {
             ))}
           </div>
         </div>
-        <div style={{height:cartCount>0?72:16}}/>
+        <div style={{height:cartCount>0?100:80}}/>
       </div>
 
       {cartCount>0 && (
-        <div className="ir-footer-bar safe-bottom" style={{padding:'8px 13px max(14px,env(safe-area-inset-bottom))'}}>
+        <div className="ir-footer-bar safe-bottom" style={{padding:'8px 13px'}}>
           <button onClick={onNext}
             style={{width:'100%',padding:'11px 14px',background:`linear-gradient(135deg,${IR.navyDark},${IR.navyLight})`,color:'#fff',border:'none',borderRadius:10,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:`0 4px 16px rgba(26,42,108,.28)`,fontFamily:'Nunito,sans-serif'}}>
             <span style={{background:IR.gold,color:IR.navyDark,padding:'2px 9px',borderRadius:99,fontSize:'0.66rem',fontWeight:900}}>{cartCount} items</span>
@@ -533,7 +569,7 @@ function PCart({ cart, onAdd, onRem, onBack, onNext }) {
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
-      <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'13px 13px 0'}}>
+      <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'13px 13px 80px'}}>
 
         {/* ETA card */}
         <div className="ir-card-navy" style={{padding:'12px 14px',marginBottom:12,display:'flex',gap:12,alignItems:'center'}}>
@@ -603,7 +639,7 @@ function PPay({ total, eta, onBack, onNext }) {
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
-      <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'14px'}}>
+      <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'14px 14px 80px'}}>
 
         {/* Amount hero */}
         <div className="ir-card-navy" style={{padding:'20px',textAlign:'center',marginBottom:16}}>
@@ -940,9 +976,9 @@ const allFeedback = allFeedbackRaw.filter(f =>
       <div className="ir-header" style={{padding:'14px 15px'}}>
         <div style={{position:'relative',zIndex:1}}>
           <div style={{fontSize:'0.54rem',color:IR.goldLight,fontWeight:800,letterSpacing:'2px',marginBottom:3}}>FEEDBACK PORTAL</div>
-          <div style={{fontSize:'1.1rem',fontWeight:900,color:'#fff',marginBottom:11}}>Passenger Reviews ⭐</div>
+          <div style={{fontSize:'1.1rem',fontWeight:900,color:'#fff',marginBottom:11}}>Passenger Reviews  ★</div>
           <div style={{display:'flex',gap:9}}>
-            {[['Avg','⭐ '+avgRating],['Reviews',allFeedback.length],['4+ Stars',allFeedback.filter(f=>f.rating>=4).length]].map(([label,val])=>(
+            {[['Avg','★ '+avgRating],['Reviews',allFeedback.length],['4+ Stars',allFeedback.filter(f=>f.rating>=4).length]].map(([label,val])=>(
               <div key={label} style={{background:'rgba(255,255,255,.12)',border:`1px solid rgba(201,168,76,.2)`,borderRadius:9,padding:'7px 10px',flex:1,textAlign:'center'}}>
                 <div style={{fontFamily:'Rajdhani,sans-serif',fontSize:'1.35rem',fontWeight:700,color:IR.gold}}>{val}</div>
                 <div style={{fontSize:'0.56rem',color:'rgba(255,255,255,.65)',marginTop:1}}>{label}</div>
@@ -1108,7 +1144,15 @@ const allComplaints = allComplaintsRaw.filter(c =>
         </div>
       </div>
 
-      <div className="ir-footer-bar safe-bottom">
+      <div style={{
+        padding:'10px 14px',
+        paddingBottom:'max(16px, env(safe-area-inset-bottom))',
+        background:'#fff',
+        borderTop:'1px solid #eef1f8',
+        flexShrink:0,
+        position:'sticky',
+        bottom:0,
+      }}>
         <button onClick={submit} disabled={!issue||(issue==='Other issue'&&!custom)||submitting}
           style={{width:'100%',padding:13,background:!issue?'#c8cde0':`linear-gradient(135deg,#991b1b,#dc2626)`,color:!issue?IR.textSub:'#fff',border:'none',borderRadius:10,fontWeight:800,cursor:!issue?'not-allowed':'pointer',fontSize:'0.86rem',display:'flex',alignItems:'center',justifyContent:'center',gap:7,fontFamily:'Nunito,sans-serif'}}>
           {submitting?<><span style={{width:12,height:12,border:'2px solid rgba(255,255,255,.4)',borderTopColor:'#fff',borderRadius:'50%',display:'inline-block',animation:'spin .7s linear infinite'}}/>Submitting…</>:'⚠️ Submit Complaint'}
