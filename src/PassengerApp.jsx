@@ -219,13 +219,24 @@ export default function PassengerApp({ prefillTrain = '12139' }) {
   const [cart, setCart]           = useState({});
   const [orderInfo, setOrderInfo] = useState({});
   const [payMethod, setPayMethod] = useState('upi');
-  const [setSessionOrderId] = useState(null);
-
+const [sessionOrderId, setSessionOrderId] = useState(null);
   const { menu: trainMenu } = useTrainMenu(prefillTrain);
 
-  const addItem = item => setCart(c => ({...c,[item.id]:(c[item.id]||0)+1}));
-  const remItem = item => setCart(c => {const n={...c};if(n[item.id]>1)n[item.id]--;else delete n[item.id];return n;});
+  // const addItem = item => setCart(c => ({...c,[item.id]:(c[item.id]||0)+1}));
+  // const remItem = item => setCart(c => {const n={...c};if(n[item.id]>1)n[item.id]--;else delete n[item.id];return n;});
+  const addItem = item => setCart(c => ({
+  ...c,
+  [item.id]: { ...item, qty: ((c[item.id]?.qty)||0) + 1 }
+}));
+const remItem = item => setCart(c => {
+  const n = {...c};
+  if (!n[item.id]) return n;
+  if (n[item.id].qty > 1) n[item.id] = {...n[item.id], qty: n[item.id].qty - 1};
+  else delete n[item.id];
+  return n;
+});
   const resetOrder = () => { setStep(0); setCart({}); setSessionOrderId(null); };
+  
 
   const passengerTabs = [
     {
@@ -447,10 +458,15 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack, trainMenu }) {
     ? ['All', ...Array.from(new Set(liveItems.map(m => m.cat).filter(Boolean)))]
     : CATS;
 
-  const cartCount = Object.values(cart).reduce((a,b)=>a+b,0);
-  const cartTotal = Object.entries(cart).reduce((s,[id,q])=>s+(menuSource.find(m=>m.id===+id||m.id===String(id))?.price||0)*q,0);
+  // const cartCount = Object.values(cart).reduce((a,b)=>a+b,0);
+  // const cartTotal = Object.entries(cart).reduce((s,[id,q])=>s+(menuSource.find(m=>m.id===+id||m.id===String(id))?.price||0)*q,0);
+  const cartCount = Object.values(cart).reduce((a,b)=>a+(b?.qty||0),0);
+  const cartTotal = Object.values(cart).reduce((s,v)=>s+(v?.price||0)*(v?.qty||0),0);
   const filtered  = menuSource.filter(m=>(cat==='All'||m.cat===cat)&&(!vegOnly||m.veg)&&(!search||m.name.toLowerCase().includes(search.toLowerCase())));
   const popular   = menuSource.filter(m=>m.popular);
+
+  const qtyCarts = Object.fromEntries(Object.entries(cart).map(([id,v])=>[id, v?.qty||0]));
+
 
   return (
     <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
@@ -507,8 +523,7 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack, trainMenu }) {
                       <span style={{fontWeight:900,color:IR.navy,fontSize:'0.8rem'}}>₹{item.price}</span>
                       <div className={`ir-veg-dot ${item.veg?'veg':'nonveg'}`}/>
                     </div>
-                    <QtyCtrl item={item} cart={cart} onAdd={onAdd} onRem={onRem}/>
-                  </div>
+<QtyCtrl item={item} cart={qtyCarts} onAdd={onAdd} onRem={onRem}/>                  </div>
                 </div>
               ))}
             </div>
@@ -535,7 +550,7 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack, trainMenu }) {
                   <p style={{fontSize:'0.62rem',color:IR.textSub,marginBottom:6,lineHeight:1.4}}>{item.desc}</p>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                     <span style={{fontSize:'0.95rem',fontWeight:900,color:IR.navy}}>₹{item.price}</span>
-                    <QtyCtrl item={item} cart={cart} onAdd={onAdd} onRem={onRem}/>
+                    <QtyCtrl item={item} cart={qtyCarts} onAdd={onAdd} onRem={onRem}/>
                   </div>
                 </div>
               </div>
@@ -563,8 +578,13 @@ function PMenu({ userInfo, cart, onAdd, onRem, onNext, onBack, trainMenu }) {
    STEP 2: Cart
 ═══════════════════════════════════════════════════════════ */
 function PCart({ cart, onAdd, onRem, onBack, onNext }) {
-  const items = Object.entries(cart).map(([id,qty])=>({item:MENU.find(m=>m.id===+id),qty})).filter(x=>x.item);
-  const total = items.reduce((s,{item,qty})=>s+item.price*qty,0);
+  // const items = Object.entries(cart).map(([id,qty])=>({item:MENU.find(m=>m.id===+id),qty})).filter(x=>x.item);
+  // const total = items.reduce((s,{item,qty})=>s+item.price*qty,0);
+  // const items = Object.entries(cart).map(([id,qty])=>({item:MENU.find(m=>String(m.id)===String(id)),qty})).filter(x=>x.item);
+  // const total = items.reduce((s,{item,qty})=>s+item.price*qty,0);
+  const qtyCarts = Object.fromEntries(Object.values(cart).map(v=>[v.id, v?.qty||0]));
+  const items = Object.values(cart).filter(v => v?.qty > 0);
+const total = items.reduce((s,v)=>s+(v.price||0)*(v.qty||0),0);
   const eta   = useRef(['~12 min','~18 min','~8 min','~22 min','~14 min'][Math.floor(Math.random()*5)]).current;
 
   return (
@@ -588,17 +608,17 @@ function PCart({ cart, onAdd, onRem, onBack, onNext }) {
 
         <div className="ir-section-label">Your Order</div>
 
-        {items.map(({item,qty})=>(
+        {items.map((item)=>(
           <div key={item.id} className="ir-card" style={{padding:'10px',display:'flex',gap:10,alignItems:'center',marginBottom:8}}>
             <div style={{width:44,height:44,borderRadius:8,background:IR.ivoryDark,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,border:`1px solid ${IR.border}`}}>
               <span style={{fontFamily:'Rajdhani,sans-serif',fontSize:'0.6rem',fontWeight:700,color:IR.textMid,textAlign:'center',lineHeight:1.2}}>{item.veg?'VEG':'N-V'}</span>
             </div>
             <div style={{flex:1,minWidth:0}}>
               <p style={{fontWeight:800,fontSize:'0.8rem',color:IR.text}}>{item.name}</p>
-              <p style={{fontSize:'0.63rem',color:IR.textSub}}>₹{item.price} × {qty}</p>
+              <p style={{fontSize:'0.63rem',color:IR.textSub}}>₹{item.price} × {item.qty}</p>
             </div>
-            <QtyCtrl item={item} cart={cart} onAdd={onAdd} onRem={onRem}/>
-            <span style={{fontWeight:900,color:IR.navy,fontSize:'0.86rem',minWidth:40,textAlign:'right'}}>₹{item.price*qty}</span>
+            <QtyCtrl item={item} cart={qtyCarts} onAdd={onAdd} onRem={onRem}/>
+            <span style={{fontWeight:900,color:IR.navy,fontSize:'0.86rem',minWidth:40,textAlign:'right'}}>₹{item.price*item.qty}</span>
           </div>
         ))}
 
@@ -731,18 +751,19 @@ function PTrack({ userInfo, orderInfo, payMethod, cart, onSetOrderId, onFeedback
   useEffect(() => { onSetOrderIdRef.current = onSetOrderId; }, [onSetOrderId]);
 
   useEffect(() => {
-    const items = Object.entries(cart).map(([id,qty])=>({
-      name:  MENU.find(m=>m.id===+id)?.name  || '',
-      qty,
-      price: MENU.find(m=>m.id===+id)?.price || 0,
-    }));
+const items = Object.values(cart).filter(v=>v?.qty>0).map(v=>({
+  name:  v.name  || '',
+  qty:   v.qty,
+  price: v.price || 0,
+}));
     const total = items.reduce((s,it)=>s+it.price*it.qty,0);
-    actions.addOrder({
-      id: orderId, trainNo: userInfo.train, seat:`${userInfo.coach}-${userInfo.seat}`,
-      coach: userInfo.coach, items, total, status:'Pending', time: now(),
-      payment: payMethod==='upi'?'UPI':'Cash', vendorId:'V001', agentId:null,
-      passengerName: userInfo.name||'Passenger',
-    }).then(()=>{ setOrderReady(true); if(onSetOrderIdRef.current) onSetOrderIdRef.current(orderId); });
+actions.addOrder({
+  id: orderId, trainNo: userInfo.train, seat:`${userInfo.coach}-${userInfo.seat}`,
+  coach: userInfo.coach, items, total, status:'Pending', time: now(),
+  payment: payMethod==='upi'?'UPI':'Cash', agentId:null,
+  passengerName: userInfo.name||'Passenger',
+})
+    .then(()=>{ setOrderReady(true); if(onSetOrderIdRef.current) onSetOrderIdRef.current(orderId); });
     const t0=setTimeout(()=>setCur(0),0);
     const t1=setTimeout(()=>setCur(1),3000);
     const t2=setTimeout(()=>setCur(2),7500);
