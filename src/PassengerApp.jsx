@@ -82,7 +82,7 @@ const GLOBAL_CSS = `
   .ir-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%231a2a6c' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center; padding-right:30px; }
 
   /* Buttons */
-  .ir-btn-primary { width:100%; padding:13px; background:linear-gradient(135deg,#0f1a4a,#2d3e9e); color:#fff; border:none; border-radius:10px; font-family:'Nunito',sans-serif; font-size:0.9rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; position:relative; overflow:hidden; transition:opacity .2s; }
+  .ir-btn-primary { min-height: 48px; white-space: nowrap; width:100%; padding:13px; background:linear-gradient(135deg,#0f1a4a,#2d3e9e); color:#fff; border:none; border-radius:10px; font-family:'Nunito',sans-serif; font-size:0.9rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; position:relative; overflow:hidden; transition:opacity .2s; }
   .ir-btn-primary::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(201,168,76,.2),transparent); transition:left .5s; }
   .ir-btn-primary:hover::before { left:100%; }
   .ir-btn-primary .btn-gold-accent { background:#c9a84c; color:#0f1a4a; padding:2px 10px; border-radius:99px; font-size:0.68rem; font-weight:900; }
@@ -188,7 +188,7 @@ const GLOBAL_CSS = `
     border-top: 1px solid #eef1f8;
     flex-shrink: 0;
     position: sticky;
-    bottom: 0;
+    bottom: 60px;
     z-index: 10;
   }
   .ir-footer-bar.safe-bottom {
@@ -359,7 +359,7 @@ function PCoachSeatSelect({ trainNo, onNext }) {
       </div>
       <div className="ir-gold-line"/>
 
-      <div style={{flex:1,overflowY:'auto',padding:'14px 14px 90px',WebkitOverflowScrolling:'touch'}}>
+      <div style={{flex:1,overflowY:'auto',padding:'14px 14px 150px',WebkitOverflowScrolling:'touch'}}>
 
         {/* Train Number (readonly) */}
         <div style={{marginBottom:13}}>
